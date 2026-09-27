@@ -204,10 +204,7 @@ struct ContentView: View {
 
         if coordinator.currentView == .terminal {
             // Dynamic height: up to terminalMaxHeightFraction of screen, min 300pt
-            let screenHeight = NSScreen.main?.visibleFrame.height ?? 800
-            let maxFraction = Defaults[.terminalMaxHeightFraction]
-            let terminalHeight = min(screenHeight * maxFraction, max(300, screenHeight * maxFraction))
-            return CGSize(width: baseSize.width, height: terminalHeight)
+            return CGSize(width: baseSize.width, height: terminalTabHeight())
         }
 
         if coordinator.currentView == .extensionExperience {
@@ -270,6 +267,7 @@ struct ContentView: View {
     @Default(.showNotHumanFace) var showNotHumanFace
     @Default(.useModernCloseAnimation) var useModernCloseAnimation
     @Default(.enableMinimalisticUI) var enableMinimalisticUI
+    @Default(.fullHeightExtensionTabs) private var fullHeightExtensionTabs
 
     private static let musicControlLogFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -1307,6 +1305,8 @@ struct ContentView: View {
                             case .extensionExperience:
                                 if let payload = currentExtensionTabPayload() {
                                     ExtensionNotchExperienceTabView(payload: payload)
+                                        .frame(width: fullHeightExtensionTabs ? fullHeightExtensionTabContentWidth : nil)
+                                        .frame(maxHeight: .infinity)
                                 } else {
                                     NotchHomeView(albumArtNamespace: albumArtNamespace)
                                 }
@@ -2518,12 +2518,43 @@ struct ContentView: View {
     }
 
     private func extensionTabPreferredHeight(baseSize: CGSize) -> CGFloat? {
-        guard let preferred = currentExtensionTabPayload()?.descriptor.tab?.preferredHeight else {
-            return nil
-        }
-        let minHeight = baseSize.height
-        let maxHeight = baseSize.height + statsAdditionalRowHeight
-        return min(max(preferred, minHeight), maxHeight)
+        let preferred = currentExtensionTabPayload()?.descriptor.tab?.preferredHeight
+        return Self.resolvedExtensionTabHeight(
+            fullHeightMode: fullHeightExtensionTabs,
+            preferredHeight: preferred,
+            baseHeight: baseSize.height,
+            maximumHeight: baseSize.height + statsAdditionalRowHeight,
+            terminalHeight: terminalTabHeight()
+        )
+    }
+
+    private var fullHeightExtensionTabContentWidth: CGFloat {
+        Self.resolvedFullHeightExtensionTabContentWidth(
+            openNotchWidth: openNotchSize.width,
+            horizontalInset: notchHorizontalPadding + 12
+        )
+    }
+
+    private func terminalTabHeight() -> CGFloat {
+        let screenHeight = NSScreen.main?.visibleFrame.height ?? 800
+        let maxFraction = Defaults[.terminalMaxHeightFraction]
+        return min(screenHeight * maxFraction, max(300, screenHeight * maxFraction))
+    }
+
+    static func resolvedExtensionTabHeight(
+        fullHeightMode: Bool,
+        preferredHeight: CGFloat?,
+        baseHeight: CGFloat,
+        maximumHeight: CGFloat,
+        terminalHeight: CGFloat
+    ) -> CGFloat? {
+        if fullHeightMode { return terminalHeight }
+        guard let preferredHeight else { return nil }
+        return min(max(preferredHeight, baseHeight), maximumHeight)
+    }
+
+    static func resolvedFullHeightExtensionTabContentWidth(openNotchWidth: CGFloat, horizontalInset: CGFloat) -> CGFloat {
+        max(0, openNotchWidth - (2 * max(0, horizontalInset)))
     }
 
     // Estimate the height required for minimalistic overrides (notably web content) and clamp it to the notch bounds.

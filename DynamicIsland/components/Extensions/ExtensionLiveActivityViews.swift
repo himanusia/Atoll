@@ -184,6 +184,7 @@ struct ExtensionNotchExperienceTabView: View {
     let payload: ExtensionNotchExperiencePayload
 
     @Default(.enableExtensionNotchInteractiveWebViews) private var interactiveWebViewsEnabled
+    @Default(.fullHeightExtensionTabs) private var fullHeightExtensionTabs
 
     private var descriptor: AtollNotchExperienceDescriptor { payload.descriptor }
     private var tabConfiguration: AtollNotchExperienceDescriptor.TabConfiguration? { descriptor.tab }
@@ -195,32 +196,44 @@ struct ExtensionNotchExperienceTabView: View {
     var body: some View {
         Group {
             if let tabConfiguration {
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 18) {
-                        header(for: tabConfiguration)
-                        ForEach(Array(tabConfiguration.sections.enumerated()), id: \.offset) { index, section in
-                            ExtensionNotchSectionView(
-                                section: section,
-                                accent: accentColor,
-                                allowWebInteraction: allowInteractiveWebViews
-                            )
-                            .accessibilityIdentifier("extension-notch-section-\(payload.descriptor.id)-\(index)")
+                if fullHeightExtensionTabs,
+                   tabConfiguration.sections.isEmpty,
+                   let webDescriptor = tabConfiguration.webContent,
+                   tabConfiguration.footnote == nil {
+                    ExtensionWebContentView(descriptor: webDescriptor, allowInteraction: allowInteractiveWebViews, cornerRadius: 16)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .accessibilityIdentifier("extension-notch-full-height-\(payload.descriptor.id)")
+                } else {
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: 18) {
+                            if !fullHeightExtensionTabs {
+                                header(for: tabConfiguration)
+                            }
+                            ForEach(Array(tabConfiguration.sections.enumerated()), id: \.offset) { index, section in
+                                ExtensionNotchSectionView(
+                                    section: section,
+                                    accent: accentColor,
+                                    allowWebInteraction: allowInteractiveWebViews
+                                )
+                                .accessibilityIdentifier("extension-notch-section-\(payload.descriptor.id)-\(index)")
+                            }
+                            if let webDescriptor = tabConfiguration.webContent {
+                                ExtensionWebContentView(descriptor: webDescriptor, allowInteraction: allowInteractiveWebViews, cornerRadius: 16)
+                                    .frame(height: webDescriptor.preferredHeight)
+                                    .frame(maxWidth: webDescriptor.maximumContentWidth ?? .infinity)
+                                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            }
+                            if let footnote = tabConfiguration.footnote {
+                                Text(footnote)
+                                    .font(.system(size: 11, weight: .regular))
+                                    .foregroundStyle(Color.white.opacity(0.65))
+                                    .lineLimit(2)
+                            }
                         }
-                        if let webDescriptor = tabConfiguration.webContent {
-                            ExtensionWebContentView(descriptor: webDescriptor, allowInteraction: allowInteractiveWebViews)
-                                .frame(height: webDescriptor.preferredHeight)
-                                .frame(maxWidth: webDescriptor.maximumContentWidth ?? .infinity)
-                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        }
-                        if let footnote = tabConfiguration.footnote {
-                            Text(footnote)
-                                .font(.system(size: 11, weight: .regular))
-                                .foregroundStyle(Color.white.opacity(0.65))
-                                .lineLimit(2)
-                        }
+                        .padding(.vertical, fullHeightExtensionTabs ? 0 : 14)
+                        .padding(.horizontal, fullHeightExtensionTabs ? 0 : 16)
                     }
-                    .padding(.vertical, 14)
-                    .padding(.horizontal, 16)
                 }
             } else {
                 Text("Extension tab unavailable")
@@ -230,7 +243,13 @@ struct ExtensionNotchExperienceTabView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(tabBackground)
+        .background {
+            if fullHeightExtensionTabs {
+                Color.clear
+            } else {
+                tabBackground
+            }
+        }
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 

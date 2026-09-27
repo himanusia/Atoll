@@ -577,6 +577,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let screenHeight = NSScreen.main?.visibleFrame.height ?? 800
             let maxFraction = Defaults[.terminalMaxHeightFraction]
             baseSize.height = min(screenHeight * maxFraction, max(300, screenHeight * maxFraction))
+        } else if coordinator.currentView == .extensionExperience && Defaults[.fullHeightExtensionTabs] {
+            let screenHeight = NSScreen.main?.visibleFrame.height ?? 800
+            let maxFraction = Defaults[.terminalMaxHeightFraction]
+            baseSize.height = min(screenHeight * maxFraction, max(300, screenHeight * maxFraction))
         }
         
         baseSize = inlineLyricsAdjustedNotchSize(
@@ -871,6 +875,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }.store(in: &cancellables)
 
         Defaults.publisher(.terminalMaxHeightFraction, options: []).sink { [weak self] _ in
+            self?.debouncedUpdateWindowSize()
+        }.store(in: &cancellables)
+
+        Defaults.publisher(.fullHeightExtensionTabs, options: []).sink { [weak self] _ in
             self?.debouncedUpdateWindowSize()
         }.store(in: &cancellables)
 

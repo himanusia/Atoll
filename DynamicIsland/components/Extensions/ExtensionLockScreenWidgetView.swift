@@ -289,6 +289,7 @@ struct ExtensionWidgetElementView: View {
 struct ExtensionWebContentView: NSViewRepresentable {
     let descriptor: AtollWidgetWebContentDescriptor
     let allowInteraction: Bool
+    var cornerRadius: CGFloat = 0
 
     func makeCoordinator() -> Coordinator {
         Coordinator(descriptor: descriptor)
@@ -322,6 +323,8 @@ struct ExtensionWebContentView: NSViewRepresentable {
     }
 
     private func applyConfiguration(_ descriptor: AtollWidgetWebContentDescriptor, to webView: WKWebView) {
+        webView.layer?.cornerRadius = cornerRadius
+        webView.layer?.masksToBounds = cornerRadius > 0
         webView.allowsBackForwardNavigationGestures = false
         webView.allowsLinkPreview = false
         if descriptor.isTransparent {

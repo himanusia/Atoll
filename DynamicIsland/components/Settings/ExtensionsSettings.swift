@@ -125,6 +125,9 @@ struct ExtensionsSettingsView: View {
                             .tint(.accentColor)
                         Defaults.Toggle(String(localized:"Allow interactive web content"), key: .enableExtensionNotchInteractiveWebViews)
                             .tint(.accentColor)
+                        Defaults.Toggle(String(localized:"Use full-height extension tabs"), key: .fullHeightExtensionTabs)
+                            .tint(.accentColor)
+                            .help(String(localized:"Hide the in-tab header and selection capsule, and size extension tabs to match Terminal."))
                     }
                     .padding(.leading, 4)
                 }
