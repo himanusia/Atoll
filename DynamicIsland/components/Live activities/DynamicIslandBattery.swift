@@ -19,6 +19,19 @@
 import SwiftUI
 import Defaults
 
+private extension BatteryChargeColor {
+    var color: Color {
+        switch self {
+        case .red:
+            return .red
+        case .green:
+            return .green
+        case .neutral:
+            return .white
+        }
+    }
+}
+
 /// A view that displays the battery status with an icon and charging indicator.
 struct BatteryView: View {
     @Default(.showPowerStatusIcons) var showPowerStatusIcons
@@ -49,15 +62,11 @@ struct BatteryView: View {
 
     /// Determines the color of the battery based on its status.
     var batteryColor: Color {
-        if isInLowPowerMode {
-            return .yellow
-        } else if levelBattery <= 20 && !isCharging && !isPluggedIn {
-            return .red
-        } else if isCharging || isPluggedIn || levelBattery == 100 {
-            return .green
-        } else {
-            return .white
-        }
+        BatteryStatusPresentation.chargeColor(
+            level: levelBattery,
+            isPluggedIn: isPluggedIn,
+            isCharging: isCharging
+        ).color
     }
 
     var body: some View {
@@ -120,6 +129,12 @@ struct BatteryView: View {
             RoundedRectangle(cornerRadius: height * 0.1, style: .continuous)
                 .fill(bodyFill)
                 .frame(width: height * 0.11, height: height * 0.36)
+
+            if let lowPowerModeSymbol = BatteryStatusPresentation.lowPowerModeSymbol(isActive: isInLowPowerMode) {
+                Image(systemName: lowPowerModeSymbol)
+                    .font(.system(size: height * 0.42, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.65))
+            }
         }
         .animation(.smooth(duration: 0.3), value: levelBattery)
         .animation(.smooth(duration: 0.3), value: batteryColor)
@@ -147,37 +162,44 @@ struct BatteryView: View {
     // MARK: - Outlined body
 
     private var outlinedBody: some View {
-        ZStack(alignment: .leading) {
+        HStack(spacing: 3) {
+            ZStack(alignment: .leading) {
+                Image(systemName: icon)
+                    .resizable()
+                    .fontWeight(.thin)
+                    .aspectRatio(contentMode: .fit)
+                    .foregroundColor(.white.opacity(0.5))
+                    .frame(
+                        width: batteryWidth + 1
+                    )
 
-            Image(systemName: icon)
-                .resizable()
-                .fontWeight(.thin)
-                .aspectRatio(contentMode: .fit)
-                .foregroundColor(.white.opacity(0.5))
-                .frame(
-                    width: batteryWidth + 1
-                )
+                RoundedRectangle(cornerRadius: 2.5)
+                    .fill(batteryColor)
+                    .frame(
+                        width: CGFloat(((CGFloat(CFloat(levelBattery)) / 100) * (batteryWidth - 6))),
+                        height: (batteryWidth - 2.75) - 18
+                    )
+                    .padding(.leading, 2)
 
-            RoundedRectangle(cornerRadius: 2.5)
-                .fill(batteryColor)
-                .frame(
-                    width: CGFloat(((CGFloat(CFloat(levelBattery)) / 100) * (batteryWidth - 6))),
-                    height: (batteryWidth - 2.75) - 18
-                )
-                .padding(.leading, 2)
-
-            if iconStatus != "" && (isForNotification || showPowerStatusIcons) {
-                ZStack {
-                    Image(iconStatus)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .foregroundColor(.white)
-                        .frame(
-                            width: 17,
-                            height: 17
-                        )
+                if iconStatus != "" && (isForNotification || showPowerStatusIcons) {
+                    ZStack {
+                        Image(iconStatus)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .foregroundColor(.white)
+                            .frame(
+                                width: 17,
+                                height: 17
+                            )
+                    }
+                    .frame(width: batteryWidth, height: batteryWidth)
                 }
-                .frame(width: batteryWidth, height: batteryWidth)
+            }
+
+            if let lowPowerModeSymbol = BatteryStatusPresentation.lowPowerModeSymbol(isActive: isInLowPowerMode) {
+                Image(systemName: lowPowerModeSymbol)
+                    .font(.system(size: max(8, batteryWidth * 0.34), weight: .medium))
+                    .foregroundStyle(.white.opacity(0.65))
             }
         }
     }
@@ -200,15 +222,11 @@ struct MinimalisticBatteryView: View {
     }
 
     private var batteryColor: Color {
-        if isInLowPowerMode {
-            return .yellow
-        } else if clamped <= 20 && !isCharging && !isPluggedIn {
-            return .red
-        } else if isCharging || isPluggedIn || clamped == 100 {
-            return .green
-        } else {
-            return .white
-        }
+        BatteryStatusPresentation.chargeColor(
+            level: Float(clamped),
+            isPluggedIn: isPluggedIn,
+            isCharging: isCharging
+        ).color
     }
 
     private var showsStatusGlyph: Bool {
@@ -270,6 +288,12 @@ struct MinimalisticBatteryView: View {
             RoundedRectangle(cornerRadius: 1.5, style: .continuous)
                 .fill(clamped == 100 ? batteryColor.gradient : batteryColor.opacity(0.4).gradient)
                 .frame(width: 2, height: terminalHeight)
+
+            if let lowPowerModeSymbol = BatteryStatusPresentation.lowPowerModeSymbol(isActive: isInLowPowerMode) {
+                Image(systemName: lowPowerModeSymbol)
+                    .font(.system(size: max(8, bodyHeight * 0.55), weight: .medium))
+                    .foregroundStyle(.white.opacity(0.65))
+            }
         }
         .animation(.smooth(duration: 0.18), value: clamped)
         .animation(.smooth(duration: 0.18), value: isCharging)
@@ -308,7 +332,7 @@ struct BatteryMenuView: View {
                     .font(.subheadline)
                     .fontWeight(.regular)
                 if isInLowPowerMode {
-                    Label("Low Power Mode", systemImage: "bolt.circle")
+                    Label("Low Power Mode", systemImage: "leaf.fill")
                         .font(.subheadline)
                         .fontWeight(.regular)
                 }
@@ -500,12 +524,21 @@ private struct BatteryCompactStatusRow: View {
     let title: String
     let batteryLevel: Int
     let tint: Color
+    let isLowPowerMode: Bool
 
     var body: some View {
         HStack {
-            Text(verbatim: title)
-                .font(.system(size: 14))
-                .foregroundColor(.white.opacity(0.8))
+            HStack(spacing: 4) {
+                Text(verbatim: title)
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.8))
+
+                if let lowPowerModeSymbol = BatteryStatusPresentation.lowPowerModeSymbol(isActive: isLowPowerMode) {
+                    Image(systemName: lowPowerModeSymbol)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.65))
+                }
+            }
 
             Spacer()
 
@@ -584,16 +617,15 @@ struct BatteryTemporaryActivityView: View {
     private var batteryTint: Color {
         switch kind {
         case .charging:
-            if isLowPowerMode {
-                return .yellow
-            } else if batteryLevel <= 20 {
-                return .red
-            }
-            return .green
+            return BatteryStatusPresentation.chargeColor(
+                level: Float(batteryLevel),
+                isPluggedIn: true,
+                isCharging: true
+            ).color
         case .lowBattery:
-            return isLowPowerMode ? .yellow : .red
+            return .red
         case .fullBattery:
-            return isLowPowerMode ? .yellow : .green
+            return .green
         }
     }
 
@@ -621,7 +653,8 @@ struct BatteryTemporaryActivityView: View {
             BatteryCompactStatusRow(
                 title: compactTitle,
                 batteryLevel: batteryLevel,
-                tint: batteryTint
+                tint: batteryTint,
+                isLowPowerMode: isLowPowerMode
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         } else {
@@ -676,22 +709,10 @@ struct BatteryTemporaryActivityView: View {
         case .charging:
             EmptyView()
         case .lowBattery:
-            if isLowPowerMode {
-                (
-                    Text(verbatim: String(localized: "Low Power Mode enabled"))
-                        .foregroundColor(.yellow)
-                        .font(.system(size: 10, weight: .medium))
-                    +
-                    Text(verbatim: String(localized: ", it is recommended to charge it."))
-                        .foregroundColor(.gray.opacity(0.6))
-                        .font(.system(size: 10, weight: .medium))
-                )
-            } else {
-                Text(verbatim: String(localized: "Turn on Low Power Mode or it\nis recommended to charge it."))
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.gray.opacity(0.6))
-                    .lineLimit(2)
-            }
+            Text(verbatim: String(localized: "It is recommended to charge your Mac."))
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.gray.opacity(0.6))
+                .lineLimit(2)
         case .fullBattery:
             Text(verbatim: String(localized: "Your Mac is fully charged."))
                 .font(.system(size: 10))
@@ -707,20 +728,11 @@ struct BatteryTemporaryActivityView: View {
         case .charging:
             EmptyView()
         case .lowBattery:
-            if isLowPowerMode {
-                yellowLowIndicator
-            } else {
-                redLowIndicator
-            }
+            redLowIndicator
         case .fullBattery:
             if showBatteryIndicator {
-                if isLowPowerMode {
-                    yellowFullIndicator
-                        .transition(.opacity.combined(with: .scale))
-                } else {
-                    greenFullIndicator
-                        .transition(.opacity.combined(with: .scale))
-                }
+                greenFullIndicator
+                    .transition(.opacity.combined(with: .scale))
             } else {
                 magSafeIndicator
                     .transition(.opacity.combined(with: .scale))
@@ -759,29 +771,6 @@ struct BatteryTemporaryActivityView: View {
         }
     }
 
-    private var yellowLowIndicator: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 30)
-                .fill(.yellow.opacity(0.2))
-                .frame(width: 70, height: 40)
-
-            HStack(spacing: 2) {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(.yellow.opacity(0.4))
-                    .frame(width: 40, height: 24)
-
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(.yellow.opacity(0.4))
-                    .frame(width: 3, height: 8)
-            }
-            .padding(.trailing, 5)
-
-            RoundedRectangle(cornerRadius: 8)
-                .fill(.yellow.gradient)
-                .frame(width: 8, height: 14)
-                .offset(x: -15)
-        }
-    }
 
     private var greenFullIndicator: some View {
         ZStack {
@@ -807,29 +796,6 @@ struct BatteryTemporaryActivityView: View {
         }
     }
 
-    private var yellowFullIndicator: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 30)
-                .fill(.yellow.opacity(0.2))
-                .frame(width: 70, height: 40)
-
-            HStack(spacing: 2) {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(.yellow.opacity(0.4))
-                    .frame(width: 44, height: 24)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.yellow.gradient)
-                            .frame(width: 34, height: 14)
-                            .opacity(pulse ? 1 : 0.4)
-                    )
-
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(.yellow.opacity(0.4))
-                    .frame(width: 3, height: 8)
-            }
-        }
-    }
 
     private var magSafeIndicator: some View {
         HStack(spacing: 0) {
@@ -865,11 +831,7 @@ struct BatteryTemporaryActivityView: View {
         case .charging:
             break
         case .lowBattery:
-            if !isLowPowerMode {
-                withAnimation(.easeInOut(duration: 1).repeatForever(autoreverses: true)) {
-                    pulse = true
-                }
-            }
+            break
         case .fullBattery:
             withAnimation(.easeInOut(duration: 1).repeatForever(autoreverses: true)) {
                 pulse = true

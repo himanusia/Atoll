@@ -35,15 +35,10 @@ final class LockScreenWeatherManager: ObservableObject {
 
     private init() {
         observeAccessoryChanges()
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            self.locationProvider.prepareAuthorization()
-            _ = await self.refresh(force: true)
-        }
     }
 
     func prepareLocationAccess() {
-        locationProvider.prepareAuthorization()
+        locationProvider.prepareAuthorization(for: .explicitUserAction)
     }
 
     func showWeatherWidget() {
@@ -52,7 +47,7 @@ final class LockScreenWeatherManager: ObservableObject {
             return
         }
 
-        locationProvider.prepareAuthorization()
+        locationProvider.prepareAuthorization(for: .weatherWidgetDisplayed)
         let existingSnapshot = snapshot
         let hadSnapshot = existingSnapshot != nil
         var cachedSnapshot = existingSnapshot
@@ -289,7 +284,7 @@ final class LockScreenWeatherManager: ObservableObject {
                 Task { @MainActor in
                     if change.newValue {
                         NSLog("LockScreenWeatherManager: widget enabled, triggering refresh")
-                        self.locationProvider.prepareAuthorization()
+                        self.locationProvider.prepareAuthorization(for: .weatherFeatureEnabled)
                         _ = await self.refresh(force: true)
                     } else {
                         LockScreenWeatherPanelManager.shared.hide()
@@ -1101,11 +1096,10 @@ private final class LockScreenWeatherLocationProvider: NSObject, CLLocationManag
         manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
     }
 
-    func prepareAuthorization() {
+    func prepareAuthorization(for trigger: LocationAuthorizationRequestTrigger) {
         let status = CLLocationManager.authorizationStatus()
-        if status == .notDetermined {
-            manager.requestWhenInUseAuthorization()
-        }
+        guard LocationAuthorizationRequestPolicy.shouldRequestAuthorization(for: trigger, status: status) else { return }
+        manager.requestWhenInUseAuthorization()
     }
 
     func currentLocation() async -> CLLocation? {

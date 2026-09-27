@@ -1108,9 +1108,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         previousScreens = NSScreen.screens
 
-        // Skip weather under UI testing: prepareLocationAccess prompts for Location.
+        // Refresh enabled weather data without prompting for location during app startup.
         if Defaults[.enableLockScreenWeatherWidget] && !AppRuntimeEnvironment.isUITesting {
-            LockScreenWeatherManager.shared.prepareLocationAccess()
             Task { @MainActor in
                 await LockScreenWeatherManager.shared.refresh(force: true)
             }

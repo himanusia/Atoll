@@ -32,6 +32,44 @@ enum BatteryTemporaryHUDKind: Equatable {
     case fullBattery
 }
 
+enum BatteryStatusTransition {
+    static func shouldPresentLowBatteryHUD(
+        previous: BatteryInfo,
+        current: BatteryInfo,
+        threshold: Float
+    ) -> Bool {
+        guard !current.isPluggedIn, !current.isCharging else { return false }
+        guard current.currentCapacity < previous.currentCapacity else { return false }
+        return previous.currentCapacity > threshold && current.currentCapacity <= threshold
+    }
+}
+
+enum BatteryChargeColor: Equatable {
+    case red
+    case green
+    case neutral
+}
+
+enum BatteryStatusPresentation {
+    static func lowPowerModeSymbol(isActive: Bool) -> String? {
+        isActive ? "leaf.fill" : nil
+    }
+
+    static func chargeColor(
+        level: Float,
+        isPluggedIn: Bool,
+        isCharging: Bool
+    ) -> BatteryChargeColor {
+        if level <= 20 && !isCharging && !isPluggedIn {
+            return .red
+        }
+        if isCharging || isPluggedIn || level == 100 {
+            return .green
+        }
+        return .neutral
+    }
+}
+
 /// A view model that manages and monitors the battery status of the device
 class BatteryStatusViewModel: ObservableObject {
 
@@ -109,13 +147,9 @@ class BatteryStatusViewModel: ObservableObject {
 
         case .lowPowerModeChanged(let isEnabled):
             print("⚡ Low power mode: \(isEnabled ? "Enabled" : "Disabled")")
-            let wasEnabled = self.isInLowPowerMode
             withAnimation {
                 self.isInLowPowerMode = isEnabled
                 self.statusText = String(localized: "Low Power: \(self.isInLowPowerMode ? String(localized: "On") : String(localized: "Off"))")
-            }
-            if !wasEnabled && isEnabled {
-                presentTemporaryBatteryHUDIfNeeded(kind: .lowBattery)
             }
 
         case .isChargingChanged(let isCharging):
@@ -265,10 +299,28 @@ class BatteryStatusViewModel: ObservableObject {
     }
 
     private func handleLowBatteryAlertIfNeeded(previousLevel: Float, newLevel: Float) {
-        guard !isPluggedIn, !isCharging else { return }
-        guard newLevel < previousLevel else { return }
         let threshold = Float(Defaults[.lowBatteryHUDThreshold])
-        guard previousLevel > threshold && newLevel <= threshold else { return }
+        let previous = BatteryInfo(
+            isPluggedIn: isPluggedIn,
+            isCharging: isCharging,
+            currentCapacity: previousLevel,
+            maxCapacity: maxCapacity,
+            isInLowPowerMode: isInLowPowerMode,
+            timeToFullCharge: timeToFullCharge
+        )
+        let current = BatteryInfo(
+            isPluggedIn: isPluggedIn,
+            isCharging: isCharging,
+            currentCapacity: newLevel,
+            maxCapacity: maxCapacity,
+            isInLowPowerMode: isInLowPowerMode,
+            timeToFullCharge: timeToFullCharge
+        )
+        guard BatteryStatusTransition.shouldPresentLowBatteryHUD(
+            previous: previous,
+            current: current,
+            threshold: threshold
+        ) else { return }
 
         self.statusText = String(localized: "Low battery")
         presentTemporaryBatteryHUDIfNeeded(kind: .lowBattery)

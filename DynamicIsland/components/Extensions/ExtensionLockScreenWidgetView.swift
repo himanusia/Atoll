@@ -286,6 +286,85 @@ struct ExtensionWidgetElementView: View {
     }
 }
 
+struct ExtensionWebNavigationPolicy {
+    let allowRemoteRequests: Bool
+    let allowLocalhostRequests: Bool
+    private let openSessionURL: (URL) -> Void
+
+    init(
+        allowRemoteRequests: Bool,
+        allowLocalhostRequests: Bool,
+        openSessionURL: @escaping (URL) -> Void = { _ in }
+    ) {
+        self.allowRemoteRequests = allowRemoteRequests
+        self.allowLocalhostRequests = allowLocalhostRequests
+        self.openSessionURL = openSessionURL
+    }
+
+    func decide(url: URL, navigationType: WKNavigationType) -> WKNavigationActionPolicy {
+        if navigationType == .linkActivated, let sessionURL = Self.validSessionURL(from: url) {
+            openSessionURL(sessionURL)
+            return .cancel
+        }
+
+        return isAllowed(url: url) ? .allow : .cancel
+    }
+
+    private func isAllowed(url: URL) -> Bool {
+        guard let scheme = url.scheme?.lowercased() else { return false }
+        if scheme == "about" || scheme == "data" {
+            return true
+        }
+        if scheme == "http" || scheme == "https" {
+            if allowRemoteRequests {
+                return true
+            }
+            guard allowLocalhostRequests else {
+                return false
+            }
+            let host = url.host?.lowercased()
+            return host == "localhost" || host == "127.0.0.1"
+        }
+        return false
+    }
+
+    private static func validSessionURL(from url: URL) -> URL? {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              components.scheme == "hermes",
+              components.host == "session",
+              components.user == nil,
+              components.password == nil,
+              components.port == nil,
+              components.query == nil,
+              components.fragment == nil,
+              exactSessionAuthority(in: url)
+        else {
+            return nil
+        }
+
+        let path = components.path
+        guard path.hasPrefix("/"), path.count > 1 else {
+            return nil
+        }
+        let sessionID = path.dropFirst()
+        guard !sessionID.isEmpty, !sessionID.contains("/") else {
+            return nil
+        }
+        return url
+    }
+
+    private static func exactSessionAuthority(in url: URL) -> Bool {
+        guard let separator = url.absoluteString.range(of: "://") else {
+            return false
+        }
+        let remainder = url.absoluteString[separator.upperBound...]
+        let authorityEnd = remainder.firstIndex { character in
+            character == "/" || character == "?" || character == "#"
+        } ?? remainder.endIndex
+        return remainder[..<authorityEnd] == "session"
+    }
+}
+
 struct ExtensionWebContentView: NSViewRepresentable {
     let descriptor: AtollWidgetWebContentDescriptor
     let allowInteraction: Bool
@@ -352,9 +431,16 @@ struct ExtensionWebContentView: NSViewRepresentable {
     final class Coordinator: NSObject, WKNavigationDelegate {
         var descriptor: AtollWidgetWebContentDescriptor
         var lastHTML: String?
+        private let openSessionURL: (URL) -> Void
 
-        init(descriptor: AtollWidgetWebContentDescriptor) {
+        init(
+            descriptor: AtollWidgetWebContentDescriptor,
+            openSessionURL: @escaping (URL) -> Void = { url in
+                _ = NSWorkspace.shared.open(url)
+            }
+        ) {
             self.descriptor = descriptor
+            self.openSessionURL = openSessionURL
         }
 
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
@@ -362,30 +448,17 @@ struct ExtensionWebContentView: NSViewRepresentable {
                 decisionHandler(.cancel)
                 return
             }
-            if isAllowed(url: url) {
-                decisionHandler(.allow)
-            } else {
-                logWidgetDiagnostics("Blocked external navigation to \(url.absoluteString)")
-                decisionHandler(.cancel)
-            }
-        }
 
-        private func isAllowed(url: URL) -> Bool {
-            guard let scheme = url.scheme?.lowercased() else { return false }
-            if scheme == "about" || scheme == "data" {
-                return true
+            let policy = ExtensionWebNavigationPolicy(
+                allowRemoteRequests: allowsRemoteRequests(),
+                allowLocalhostRequests: descriptor.allowLocalhostRequests,
+                openSessionURL: openSessionURL
+            )
+            let decision = policy.decide(url: url, navigationType: navigationAction.navigationType)
+            if decision == .cancel {
+                logWidgetDiagnostics("Blocked external navigation to \(url.absoluteString)")
             }
-            if (scheme == "http" || scheme == "https") {
-                if allowsRemoteRequests() {
-                    return true
-                }
-                guard descriptor.allowLocalhostRequests else {
-                    return false
-                }
-                let host = url.host?.lowercased()
-                return host == "localhost" || host == "127.0.0.1"
-            }
-            return false
+            decisionHandler(decision)
         }
 
         private func allowsRemoteRequests() -> Bool {
