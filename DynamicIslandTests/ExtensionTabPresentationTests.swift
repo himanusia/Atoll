@@ -108,6 +108,33 @@ final class ExtensionTabPresentationTests: XCTestCase {
         XCTAssertNil(openedURL)
     }
 
+    func testSessionHandoffClassificationRequiresUserActivationAndValidIdentifier() throws {
+        let validURL = try XCTUnwrap(URL(string: "hermes://session/session-123"))
+        let malformedURL = try XCTUnwrap(URL(string: "hermes://session/session%2F123"))
+        let policy = ExtensionWebNavigationPolicy(
+            allowRemoteRequests: false,
+            allowLocalhostRequests: false
+        )
+
+        XCTAssertTrue(policy.isUserActivatedSessionHandoff(url: validURL, navigationType: .linkActivated))
+        XCTAssertFalse(policy.isUserActivatedSessionHandoff(url: validURL, navigationType: .other))
+        XCTAssertFalse(policy.isUserActivatedSessionHandoff(url: malformedURL, navigationType: .linkActivated))
+    }
+
+    func testSessionHandoffAcceptsIdentifierAtMaximumLength() throws {
+        let sessionID = String(repeating: "a", count: 128)
+        let url = try XCTUnwrap(URL(string: "hermes://session/\(sessionID)"))
+        var openedURL: URL?
+        let policy = ExtensionWebNavigationPolicy(
+            allowRemoteRequests: false,
+            allowLocalhostRequests: false,
+            openSessionURL: { openedURL = $0 }
+        )
+
+        XCTAssertEqual(policy.decide(url: url, navigationType: .linkActivated), .cancel)
+        XCTAssertEqual(openedURL, url)
+    }
+
     func testMalformedAndArbitrarySchemeURLsAreBlockedWithoutLaunching() throws {
         let blockedURLs = [
             "hermes://session/",
@@ -117,6 +144,15 @@ final class ExtensionTabPresentationTests: XCTestCase {
             "hermes://session/session-123#fragment",
             "hermes://user@session/session-123",
             "hermes://session:443/session-123",
+            "hermes://session/.",
+            "hermes://session/..",
+            "hermes://session/session.id",
+            "hermes://session/session%2F123",
+            "hermes://session/%2E",
+            "hermes://session/session%00id",
+            "hermes://session/session%20id",
+            "hermes://session/%73ession-123",
+            "hermes://session/\(String(repeating: "a", count: 129))",
             "javascript:window.alert(1)",
             "custom://session/session-123"
         ]

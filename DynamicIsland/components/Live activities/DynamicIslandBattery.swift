@@ -134,6 +134,7 @@ struct BatteryView: View {
                 Image(systemName: lowPowerModeSymbol)
                     .font(.system(size: height * 0.42, weight: .medium))
                     .foregroundStyle(.white.opacity(0.65))
+                    .accessibilityLabel(Text("Low Power Mode"))
             }
         }
         .animation(.smooth(duration: 0.3), value: levelBattery)
@@ -200,6 +201,7 @@ struct BatteryView: View {
                 Image(systemName: lowPowerModeSymbol)
                     .font(.system(size: max(8, batteryWidth * 0.34), weight: .medium))
                     .foregroundStyle(.white.opacity(0.65))
+                    .accessibilityLabel(Text("Low Power Mode"))
             }
         }
     }
@@ -293,6 +295,7 @@ struct MinimalisticBatteryView: View {
                 Image(systemName: lowPowerModeSymbol)
                     .font(.system(size: max(8, bodyHeight * 0.55), weight: .medium))
                     .foregroundStyle(.white.opacity(0.65))
+                    .accessibilityLabel(Text("Low Power Mode"))
             }
         }
         .animation(.smooth(duration: 0.18), value: clamped)
@@ -532,11 +535,14 @@ private struct BatteryCompactStatusRow: View {
                 Text(verbatim: title)
                     .font(.system(size: 14))
                     .foregroundColor(.white.opacity(0.8))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
 
                 if let lowPowerModeSymbol = BatteryStatusPresentation.lowPowerModeSymbol(isActive: isLowPowerMode) {
                     Image(systemName: lowPowerModeSymbol)
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(.white.opacity(0.65))
+                        .accessibilityLabel(Text("Low Power Mode"))
                 }
             }
 
@@ -831,7 +837,11 @@ struct BatteryTemporaryActivityView: View {
         case .charging:
             break
         case .lowBattery:
-            break
+            if BatteryStatusPresentation.shouldPulseLowBatteryIndicator(isInLowPowerMode: isLowPowerMode) {
+                withAnimation(.easeInOut(duration: 1).repeatForever(autoreverses: true)) {
+                    pulse = true
+                }
+            }
         case .fullBattery:
             withAnimation(.easeInOut(duration: 1).repeatForever(autoreverses: true)) {
                 pulse = true

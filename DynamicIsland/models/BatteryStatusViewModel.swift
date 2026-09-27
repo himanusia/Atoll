@@ -55,6 +55,10 @@ enum BatteryStatusPresentation {
         isActive ? "leaf.fill" : nil
     }
 
+    static func shouldPulseLowBatteryIndicator(isInLowPowerMode: Bool) -> Bool {
+        !isInLowPowerMode
+    }
+
     static func chargeColor(
         level: Float,
         isPluggedIn: Bool,

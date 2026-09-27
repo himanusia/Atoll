@@ -301,9 +301,13 @@ struct ExtensionWebNavigationPolicy {
         self.openSessionURL = openSessionURL
     }
 
+    func isUserActivatedSessionHandoff(url: URL, navigationType: WKNavigationType) -> Bool {
+        navigationType == .linkActivated && Self.validSessionURL(from: url) != nil
+    }
+
     func decide(url: URL, navigationType: WKNavigationType) -> WKNavigationActionPolicy {
-        if navigationType == .linkActivated, let sessionURL = Self.validSessionURL(from: url) {
-            openSessionURL(sessionURL)
+        if isUserActivatedSessionHandoff(url: url, navigationType: navigationType) {
+            openSessionURL(url)
             return .cancel
         }
 
@@ -342,15 +346,28 @@ struct ExtensionWebNavigationPolicy {
             return nil
         }
 
-        let path = components.path
-        guard path.hasPrefix("/"), path.count > 1 else {
+        let encodedPath = components.percentEncodedPath
+        guard encodedPath.hasPrefix("/"), encodedPath.count > 1 else {
             return nil
         }
-        let sessionID = path.dropFirst()
-        guard !sessionID.isEmpty, !sessionID.contains("/") else {
+        let sessionID = encodedPath.dropFirst()
+        guard Self.isCanonicalSessionID(sessionID) else {
             return nil
         }
         return url
+    }
+
+    /// Hermes session IDs are opaque ASCII tokens (alphanumeric, `_`, `-`).
+    /// Reject percent escapes and path punctuation so a URL can encode exactly
+    /// one canonical session identifier, never a decoded delimiter or control.
+    private static func isCanonicalSessionID(_ sessionID: Substring) -> Bool {
+        let bytes = sessionID.utf8
+        guard !bytes.isEmpty, bytes.count <= 128 else {
+            return false
+        }
+        return bytes.allSatisfy { byte in
+            (48...57).contains(byte) || (65...90).contains(byte) || (97...122).contains(byte) || byte == 45 || byte == 95
+        }
     }
 
     private static func exactSessionAuthority(in url: URL) -> Bool {
@@ -454,9 +471,13 @@ struct ExtensionWebContentView: NSViewRepresentable {
                 allowLocalhostRequests: descriptor.allowLocalhostRequests,
                 openSessionURL: openSessionURL
             )
+            let isSessionHandoff = policy.isUserActivatedSessionHandoff(
+                url: url,
+                navigationType: navigationAction.navigationType
+            )
             let decision = policy.decide(url: url, navigationType: navigationAction.navigationType)
-            if decision == .cancel {
-                logWidgetDiagnostics("Blocked external navigation to \(url.absoluteString)")
+            if decision == .cancel && !isSessionHandoff {
+                logWidgetDiagnostics("Blocked external navigation")
             }
             decisionHandler(decision)
         }

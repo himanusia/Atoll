@@ -62,6 +62,22 @@ final class BatteryStatusTests: XCTestCase {
         XCTAssertEqual(view.batteryColor, .red)
     }
 
+    func testChargingAndFullyChargedBatteryColorsAreGreen() {
+        XCTAssertEqual(
+            BatteryStatusPresentation.chargeColor(level: 8, isPluggedIn: false, isCharging: true),
+            .green
+        )
+        XCTAssertEqual(
+            BatteryStatusPresentation.chargeColor(level: 100, isPluggedIn: false, isCharging: false),
+            .green
+        )
+    }
+
+    func testLowBatteryPulseIsPreservedOutsideLowPowerMode() {
+        XCTAssertTrue(BatteryStatusPresentation.shouldPulseLowBatteryIndicator(isInLowPowerMode: false))
+        XCTAssertFalse(BatteryStatusPresentation.shouldPulseLowBatteryIndicator(isInLowPowerMode: true))
+    }
+
     func testLocationPermissionIsNotRequestedAtAppLaunch() {
         XCTAssertFalse(
             LocationAuthorizationRequestPolicy.shouldRequestAuthorization(

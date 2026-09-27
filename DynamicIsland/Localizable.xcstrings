@@ -1,6 +1,17 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "It is recommended to charge your Mac." : {
+      "comment" : "Description shown in the low-battery HUD.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It is recommended to charge your Mac."
+          }
+        }
+      }
+    },
     "Pinned lyric context" : {
       "comment" : "Pinned lyrics setting in Media settings.",
       "localizations" : {
