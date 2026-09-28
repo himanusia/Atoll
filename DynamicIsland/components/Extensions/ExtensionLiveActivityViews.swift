@@ -231,8 +231,9 @@ struct ExtensionNotchExperienceTabView: View {
                                     .lineLimit(2)
                             }
                         }
-                        .padding(.vertical, fullHeightExtensionTabs ? 0 : 14)
+                        .padding(.top, fullHeightExtensionTabs ? 0 : 14)
                         .padding(.horizontal, fullHeightExtensionTabs ? 0 : 16)
+                        .padding(.bottom, fullHeightExtensionTabs ? 0 : 16)
                     }
                 }
             } else {
