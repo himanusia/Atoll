@@ -60,7 +60,8 @@ struct ExtensionLiveActivityStandaloneView: View {
             ExtensionMusicWingView(
                 payload: payload,
                 notchHeight: contentHeight,
-                trailingWidth: layout.trailingWidth
+                trailingWidth: layout.trailingWidth,
+                compactStandalone: true
             )
                 .frame(width: layout.trailingWidth, height: contentHeight)
         }
@@ -86,6 +87,7 @@ struct ExtensionMusicWingView: View {
     let payload: ExtensionLiveActivityPayload
     let notchHeight: CGFloat
     let trailingWidth: CGFloat
+    let compactStandalone: Bool
 
     private var descriptor: AtollLiveActivityDescriptor { payload.descriptor }
     private var accentColor: Color { descriptor.accentColor.swiftUIColor }
@@ -94,41 +96,55 @@ struct ExtensionMusicWingView: View {
     }
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: 6) {
-            switch trailingRenderable {
-            case let .content(content):
-                if case .none = content {
+        Group {
+            if compactStandalone {
+                // Music's closed wing centers its contents in the full 26pt
+                // height. The paired-extension inset (8pt right / 6pt top)
+                // instead shifts a standalone digit up and left, and clips
+                // its 16pt glyph in the 26pt-high slot.
+                wingContent(alignment: .center)
+                    .frame(width: trailingWidth, height: notchHeight, alignment: .center)
+            } else {
+                VStack(alignment: .trailing, spacing: 6) {
+                    wingContent(alignment: .trailing)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                     Spacer(minLength: 0)
-                } else {
-                    ExtensionEdgeContentView(
-                        content: content,
-                        accent: accentColor,
-                        availableWidth: trailingWidth,
-                        alignment: .trailing
-                    )
-                    .frame(maxWidth: .infinity, alignment: .trailing)
                 }
-            case let .indicator(indicator):
-                ExtensionProgressIndicatorView(
-                    indicator: indicator,
-                    progress: descriptor.progress,
-                    accent: accentColor,
-                    estimatedDuration: descriptor.estimatedDuration,
-                    maxVisualHeight: notchHeight
-                )
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                .padding(.trailing, 8)
+                .padding(.vertical, 6)
             }
-
-            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        .padding(.trailing, 8)
-        .padding(.vertical, 6)
         .onAppear {
             logExtensionDiagnostics("Displaying extension live activity \(payload.descriptor.id) within music wing")
         }
         .onDisappear {
             logExtensionDiagnostics("Hid extension live activity \(payload.descriptor.id) from music wing")
+        }
+    }
+
+    @ViewBuilder
+    private func wingContent(alignment: Alignment) -> some View {
+        switch trailingRenderable {
+        case let .content(content):
+            if case .none = content {
+                Spacer(minLength: 0)
+            } else {
+                ExtensionEdgeContentView(
+                    content: content,
+                    accent: accentColor,
+                    availableWidth: trailingWidth,
+                    alignment: alignment
+                )
+            }
+        case let .indicator(indicator):
+            ExtensionProgressIndicatorView(
+                indicator: indicator,
+                progress: descriptor.progress,
+                accent: accentColor,
+                estimatedDuration: descriptor.estimatedDuration,
+                maxVisualHeight: notchHeight
+            )
         }
     }
 }

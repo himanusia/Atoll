@@ -1733,7 +1733,7 @@ struct ContentView: View {
         case .recording:
             spectrumView(forceSpectrum: true, trailingInset: 6)
         case .extensionPayload(let payload):
-            ExtensionMusicWingView(payload: payload, notchHeight: notchHeight, trailingWidth: trailingWidth)
+            ExtensionMusicWingView(payload: payload, notchHeight: notchHeight, trailingWidth: trailingWidth, compactStandalone: false)
         case .shelf(let count):
             // File count badge: bold white number, like a minimal pill
             Text("\(count)")
