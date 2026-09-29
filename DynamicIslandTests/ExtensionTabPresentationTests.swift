@@ -4,6 +4,21 @@ import WebKit
 
 @MainActor
 final class ExtensionTabPresentationTests: XCTestCase {
+    func testClosedExtensionWingsMatchNativeMusicWhenContentsFit() {
+        XCTAssertEqual(ExtensionLayoutMetrics.leadingWidth(
+            for: .image(data: Data(), size: CGSize(width: 26, height: 26), cornerRadius: 0),
+            baseWidth: 26
+        ), 26)
+        XCTAssertEqual(ExtensionLayoutMetrics.leadingWidth(
+            for: .image(data: Data(), size: CGSize(width: 44, height: 26), cornerRadius: 0),
+            baseWidth: 26
+        ), 44, "larger extension artwork must not be clipped")
+        XCTAssertEqual(ExtensionLayoutMetrics.edgeWidth(
+            for: .animation(data: Data(), size: CGSize(width: 10, height: 16)),
+            baseWidth: 26
+        ), 26, "running digit fits native music's 26pt right wing")
+    }
+
     func testFullHeightExtensionTabMatchesTerminalHeight() {
         let height = ContentView.resolvedExtensionTabHeight(
             fullHeightMode: true,

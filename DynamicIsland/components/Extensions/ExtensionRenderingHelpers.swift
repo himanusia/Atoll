@@ -526,6 +526,21 @@ struct ExtensionCountdownTextView: View {
 // MARK: - Layout Metrics
 
 enum ExtensionLayoutMetrics {
+    static func leadingWidth(for icon: AtollIconDescriptor, baseWidth: CGFloat) -> CGFloat {
+        let requestedWidth: CGFloat
+        switch icon {
+        case let .image(_, size, _), let .appIcon(_, size, _), let .lottie(_, size):
+            requestedWidth = size.width
+        case let .symbol(_, size, _):
+            requestedWidth = size
+        case .none:
+            requestedWidth = baseWidth
+        }
+        // Music uses one content-height wing on each side. Honor wider
+        // extension artwork, but do not reserve 44pt for a 26pt icon.
+        return max(baseWidth, requestedWidth)
+    }
+
     static func trailingWidth(for payload: ExtensionLiveActivityPayload, baseWidth: CGFloat, maxWidth: CGFloat? = nil) -> CGFloat {
         let renderable = resolvedExtensionTrailingRenderable(for: payload.descriptor)
         var width: CGFloat

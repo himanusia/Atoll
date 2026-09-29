@@ -1733,7 +1733,7 @@ struct ContentView: View {
         case .recording:
             spectrumView(forceSpectrum: true, trailingInset: 6)
         case .extensionPayload(let payload):
-            ExtensionMusicWingView(payload: payload, notchHeight: notchHeight, trailingWidth: trailingWidth)
+            ExtensionMusicWingView(payload: payload, notchHeight: notchHeight, trailingWidth: trailingWidth, compactStandalone: false)
         case .shelf(let count):
             // File count badge: bold white number, like a minimal pill
             Text("\(count)")
@@ -2003,12 +2003,15 @@ struct ContentView: View {
     private func extensionStandaloneLayout(for payload: ExtensionLiveActivityPayload, notchHeight: CGFloat, isHovering: Bool) -> ExtensionStandaloneLayout {
         let outerHeight = notchHeight
         let contentHeight = max(0, notchHeight - (isHovering ? 0 : 12))
-        let leadingWidth = max(contentHeight, 44)
+        let leadingWidth = ExtensionLayoutMetrics.leadingWidth(
+            for: payload.descriptor.leadingIcon,
+            baseWidth: contentHeight
+        )
         let centerWidth: CGFloat = max(vm.closedNotchSize.width + (isHovering ? 8 : 0), 96)
         let trailingWidth = ExtensionLayoutMetrics.trailingWidth(
             for: payload,
-            baseWidth: leadingWidth,
-            maxWidth: leadingWidth + centerWidth * 0.6
+            baseWidth: contentHeight,
+            maxWidth: contentHeight + centerWidth * 0.6
         )
         let totalWidth = leadingWidth + centerWidth + trailingWidth
         return ExtensionStandaloneLayout(
