@@ -98,6 +98,14 @@ final class ExtensionTabPresentationTests: XCTestCase {
         XCTAssertLessThan(contentWidth, 690)
     }
 
+    func testFullHeightExtensionBottomBorderMatchesVisibleSideBorder() {
+        // Installed Hermes capture: 14px each side, 24px below at 2x.
+        // Reduce only this tab's bottom inset by 5pt (10px); keep native tabs.
+        XCTAssertEqual(ContentView.openBottomInset(isExtensionTab: true, fullHeightMode: true), 7)
+        XCTAssertEqual(ContentView.openBottomInset(isExtensionTab: true, fullHeightMode: false), 12)
+        XCTAssertEqual(ContentView.openBottomInset(isExtensionTab: false, fullHeightMode: true), 12)
+    }
+
     func testUserActivatedHermesSessionLinkOpensAndCancelsNavigation() throws {
         let url = try XCTUnwrap(URL(string: "hermes://session/session-123"))
         var openedURL: URL?

@@ -660,6 +660,19 @@ struct ContentView: View {
         installRootLifecycleHandlers(on: rootBodyView)
     }
 
+    static func openBottomInset(isExtensionTab: Bool, fullHeightMode: Bool) -> CGFloat {
+        // In the full-height web tab the visible 2x border measured 14px on
+        // either side but 24px below. Keep every other notch tab unchanged.
+        isExtensionTab && fullHeightMode ? 7 : 12
+    }
+
+    private var openBottomInset: CGFloat {
+        Self.openBottomInset(
+            isExtensionTab: coordinator.currentView == .extensionExperience,
+            fullHeightMode: fullHeightExtensionTabs
+        )
+    }
+
     private var mainLayoutBase: some View {
         NotchLayout()
             .frame(alignment: .top)
@@ -667,7 +680,8 @@ struct ContentView: View {
             // Applying the regular closed-notch inset here makes that surface
             // wider than both the root view and its NSWindow, clipping both sides.
             .padding(.horizontal, isConnectivityHUDVisible ? 0 : notchHorizontalPadding)
-            .padding([.horizontal, .bottom], vm.notchState == .open ? 12 : 0)
+            .padding(.horizontal, vm.notchState == .open ? 12 : 0)
+            .padding(.bottom, vm.notchState == .open ? openBottomInset : 0)
             .background(.black)
             .clipShape(resolvedClipShape)
             // Keep the anti-gap fill outside the clipped notch. The window sits
@@ -870,7 +884,7 @@ struct ContentView: View {
         }
         .frame(
             maxWidth: (dynamicNotchSize.width + (vm.notchState == .open ? 24 : 0) + (isDynamicIslandMode ? dynamicIslandShadowInset * 2 : 0)).rounded(),
-            maxHeight: (dynamicNotchSize.height + (vm.notchState == .open ? 12 : 0) + (isIslandMode ? 0 : notchTopScreenBleedAmount) + (isDynamicIslandMode ? dynamicIslandTopOffset + dynamicIslandShadowInset * 2 : currentShadowPadding)).rounded(),
+            maxHeight: (dynamicNotchSize.height + (vm.notchState == .open ? openBottomInset : 0) + (isIslandMode ? 0 : notchTopScreenBleedAmount) + (isDynamicIslandMode ? dynamicIslandTopOffset + dynamicIslandShadowInset * 2 : currentShadowPadding)).rounded(),
             alignment: .top
         )
         .animation(nil, value: vm.notchState)
