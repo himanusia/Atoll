@@ -429,9 +429,19 @@ struct ContentView: View {
         return screen.safeAreaInsets.top <= 0
     }
 
+    /// Extension peeks are closed-notch notifications. An open extension tab
+    /// already displays its live state, and inserting the peek into its header
+    /// can consume the tab's height during a completion update.
+    static func shouldPresentExtensionActivityInHeader(notchState: NotchState) -> Bool {
+        notchState == .closed
+    }
+
     /// Whether the global sneak peek is visible on this specific screen.
     private var isSneakPeekVisibleOnCurrentScreen: Bool {
         guard coordinator.sneakPeek.show else { return false }
+        if coordinator.sneakPeek.type.isExtensionPayload && !Self.shouldPresentExtensionActivityInHeader(notchState: vm.notchState) {
+            return false
+        }
         guard Defaults[.showOnAllDisplays] else { return true }
         guard let targetScreenName = coordinator.sneakPeek.targetScreenName else { return true }
         return currentScreenName == targetScreenName
@@ -1150,7 +1160,7 @@ struct ContentView: View {
                           DoNotDisturbLiveActivity()
                     } else if (!isCurrentScreenExpansionVisible || currentScreenExpansionType == .privacy) && vm.notchState == .closed && privacyManager.hasAnyIndicator && (Defaults[.enableCameraDetection] || Defaults[.enableMicrophoneDetection]) && !vm.hideOnClosed {
                         PrivacyLiveActivity()
-                      } else if let extensionPayload = extensionStandalonePayload {
+                      } else if vm.notchState == .closed, let extensionPayload = extensionStandalonePayload {
                           let layout = extensionStandaloneLayout(
                               for: extensionPayload,
                               notchHeight: vm.effectiveClosedNotchHeight,

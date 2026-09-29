@@ -4,6 +4,11 @@ import WebKit
 
 @MainActor
 final class ExtensionTabPresentationTests: XCTestCase {
+    func testExtensionCompletionPeekDoesNotReplaceAnOpenTab() {
+        XCTAssertFalse(ContentView.shouldPresentExtensionActivityInHeader(notchState: .open))
+        XCTAssertTrue(ContentView.shouldPresentExtensionActivityInHeader(notchState: .closed))
+    }
+
     func testClosedExtensionWingsMatchNativeMusicWhenContentsFit() {
         XCTAssertEqual(ExtensionLayoutMetrics.leadingWidth(
             for: .image(data: Data(), size: CGSize(width: 26, height: 26), cornerRadius: 0),
