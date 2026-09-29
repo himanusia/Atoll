@@ -1171,6 +1171,10 @@ struct ContentView: View {
                               layout: layout,
                               isHovering: isHovering
                           )
+                          // Same closed-notch swap as the music wing: a new Hermes
+                          // session must grow the wing with the scale/opacity
+                          // spring instead of popping straight to its final frame.
+                          .transition(closedLiveActivitySwapTransition)
                       } else if !coordinator.expandingView.show && vm.notchState == .closed && !shelfState.isEmpty && !vm.hideOnClosed && !lockScreenManager.isLocked && !enableMinimalisticUI {
                           ShelfInlineLiveActivity()
                               .transition(.opacity.animation(.smooth(duration: 0.25)))

@@ -81,8 +81,15 @@ final class ExtensionLiveActivityManager: ObservableObject {
                 descriptor: descriptor,
                 receivedAt: .now
             )
-            activeActivities.append(payload)
-            sortActivities()
+            // A first-time activity is what makes the closed notch grow its wing,
+            // so the insertion has to animate the same way the music activity's
+            // does. Without an ambient animation SwiftUI swaps the wing in on the
+            // next frame and the notch snaps open with no transition; dismissal
+            // already wrapped its own removal in a spring for the same reason.
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) {
+                activeActivities.append(payload)
+                sortActivities()
+            }
             authorizationManager.recordActivity(for: bundleIdentifier, scope: .liveActivities)
             logDiagnostics("Queued live activity \(descriptor.id) for \(bundleIdentifier); total activities: \(activeActivities.count)")
             isUpdate = false
