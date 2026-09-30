@@ -24,6 +24,25 @@ final class ExtensionTabPresentationTests: XCTestCase {
         ), 26, "running digit fits native music's 26pt right wing")
     }
 
+    func testStandaloneAnimationWidthBalancesTheClosedNotchMargins() {
+        let contentHeight: CGFloat = 26
+        let outerHeight: CGFloat = 38
+        let animation = AtollTrailingContent.animation(data: Data(), size: CGSize(width: 26, height: 26))
+
+        let standaloneWidth = ExtensionLayoutMetrics.standaloneEdgeWidth(
+            for: animation,
+            baseWidth: contentHeight
+        )
+        let pairedWidth = ExtensionLayoutMetrics.edgeWidth(
+            for: animation,
+            baseWidth: contentHeight
+        )
+
+        XCTAssertEqual(standaloneWidth, 26, "standalone uses root horizontal padding without adding it twice")
+        XCTAssertEqual((outerHeight - contentHeight) / 2, 6, "vertical margin comes from centered outer height")
+        XCTAssertEqual(pairedWidth, 42, "paired music wing keeps its existing 16pt animation inset")
+    }
+
     func testFullHeightExtensionTabMatchesTerminalHeight() {
         let height = ContentView.resolvedExtensionTabHeight(
             fullHeightMode: true,

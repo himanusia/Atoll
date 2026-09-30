@@ -2036,7 +2036,7 @@ struct ContentView: View {
             baseWidth: contentHeight
         )
         let centerWidth: CGFloat = max(vm.closedNotchSize.width + (isHovering ? 8 : 0), 96)
-        let trailingWidth = ExtensionLayoutMetrics.trailingWidth(
+        let trailingWidth = ExtensionLayoutMetrics.standaloneTrailingWidth(
             for: payload,
             baseWidth: contentHeight,
             maxWidth: contentHeight + centerWidth * 0.6
