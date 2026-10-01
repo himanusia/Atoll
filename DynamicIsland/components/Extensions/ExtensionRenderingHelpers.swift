@@ -579,6 +579,13 @@ enum ExtensionLayoutMetrics {
         return width
     }
 
+    static func usesCenteredPairedLayout(for content: AtollTrailingContent) -> Bool {
+        if case .animation = content {
+            return true
+        }
+        return false
+    }
+
     static func edgeWidth(for content: AtollTrailingContent, baseWidth: CGFloat, maxWidth: CGFloat? = nil) -> CGFloat {
         var width = widthForContent(content, baseWidth: baseWidth)
         if let maxWidth {
@@ -618,7 +625,10 @@ enum ExtensionLayoutMetrics {
         case .spectrum:
             return max(baseWidth, 56)
         case let .animation(data: _, size: size):
-            return max(baseWidth, size.width + 16)
+            // Paired animation content is centered in the full music wing.
+            // The closed root already supplies its horizontal corner inset;
+            // reserving another 16pt recreates the right-side margin defect.
+            return max(baseWidth, size.width)
         case .none:
             return baseWidth
         }
