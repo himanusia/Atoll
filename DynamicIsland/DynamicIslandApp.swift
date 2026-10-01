@@ -593,12 +593,47 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             isStatsTabActive: coordinator.currentView == .stats,
             secondRowProgress: coordinator.statsSecondRowExpansion
         )
-        let result = addShadowPadding(
+        var result = addShadowPadding(
             to: adjustedContentSize,
             isMinimalistic: Defaults[.enableMinimalisticUI]
         )
-
+        if let standaloneExtensionWidth = standaloneExtensionWidthForWindow() {
+            result.width = max(result.width, standaloneExtensionWidth)
+        }
         return result
+    }
+
+    private func standaloneExtensionWidthForWindow() -> CGFloat? {
+        guard vm.notchState == .closed,
+              !vm.hideOnClosed,
+              !LockScreenManager.shared.isLocked,
+              Defaults[.enableExtensionLiveActivities],
+              vm.effectiveClosedNotchHeight > 0 else {
+            return nil
+        }
+
+        let musicPayloadID: String? = {
+            guard closedMusicPairingEligibleForSizing() else { return nil }
+            return ExtensionLiveActivityManager.shared.sortedActivities(for: true).first?.id
+        }()
+        guard let payload = ExtensionLiveActivityManager.shared
+            .sortedActivities()
+            .first(where: { $0.id != musicPayloadID }) else {
+            return nil
+        }
+
+        let contentHeight = max(0, vm.effectiveClosedNotchHeight - 12)
+        let centerWidth = max(vm.closedNotchSize.width, 96)
+        let leadingWidth = ExtensionLayoutMetrics.leadingWidth(
+            for: payload.descriptor.leadingIcon,
+            baseWidth: contentHeight
+        )
+        let trailingWidth = ExtensionLayoutMetrics.standaloneTrailingWidth(
+            for: payload,
+            baseWidth: contentHeight,
+            maxWidth: contentHeight + centerWidth * 0.6
+        )
+        return leadingWidth + centerWidth + trailingWidth
     }
 
     private func recordingHUDLayoutForSizing() -> RecordingHUDLayout {

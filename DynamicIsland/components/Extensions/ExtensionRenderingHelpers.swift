@@ -557,10 +557,46 @@ enum ExtensionLayoutMetrics {
         return width
     }
 
+    /// Resolves the trailing wing width for a standalone closed-notch activity.
+    ///
+    /// Paired music wings keep their existing content padding. Standalone
+    /// animation content does not add an inner side margin: the root notch
+    /// already supplies horizontal corner-radius padding. Adding 12pt here
+    /// double-counts the right margin while vertical centering adds only 6pt.
+    static func standaloneTrailingWidth(for payload: ExtensionLiveActivityPayload, baseWidth: CGFloat, maxWidth: CGFloat? = nil) -> CGFloat {
+        let renderable = resolvedExtensionTrailingRenderable(for: payload.descriptor)
+        var width: CGFloat
+        switch renderable {
+        case let .content(content):
+            width = standaloneEdgeWidth(for: content, baseWidth: baseWidth, maxWidth: maxWidth)
+        case let .indicator(indicator):
+            width = edgeWidth(for: .none, baseWidth: baseWidth, maxWidth: maxWidth)
+            width = max(width, widthForProgress(indicator))
+        }
+        if let maxWidth {
+            width = min(width, maxWidth)
+        }
+        return width
+    }
+
     static func edgeWidth(for content: AtollTrailingContent, baseWidth: CGFloat, maxWidth: CGFloat? = nil) -> CGFloat {
         var width = widthForContent(content, baseWidth: baseWidth)
         if let maxWidth {
             width = min(width, maxWidth)
+        }
+        return width
+    }
+
+    static func standaloneEdgeWidth(for content: AtollTrailingContent, baseWidth: CGFloat, maxWidth: CGFloat? = nil) -> CGFloat {
+        let width: CGFloat
+        switch content {
+        case let .animation(data: _, size: size):
+            width = max(baseWidth, size.width)
+        default:
+            width = widthForContent(content, baseWidth: baseWidth)
+        }
+        if let maxWidth {
+            return min(width, maxWidth)
         }
         return width
     }

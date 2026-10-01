@@ -4,6 +4,11 @@ import WebKit
 
 @MainActor
 final class ExtensionTabPresentationTests: XCTestCase {
+    func testExtensionCompletionPeekDoesNotReplaceAnOpenTab() {
+        XCTAssertFalse(ContentView.shouldPresentExtensionActivityInHeader(notchState: .open))
+        XCTAssertTrue(ContentView.shouldPresentExtensionActivityInHeader(notchState: .closed))
+    }
+
     func testClosedExtensionWingsMatchNativeMusicWhenContentsFit() {
         XCTAssertEqual(ExtensionLayoutMetrics.leadingWidth(
             for: .image(data: Data(), size: CGSize(width: 26, height: 26), cornerRadius: 0),
@@ -17,6 +22,25 @@ final class ExtensionTabPresentationTests: XCTestCase {
             for: .animation(data: Data(), size: CGSize(width: 10, height: 16)),
             baseWidth: 26
         ), 26, "running digit fits native music's 26pt right wing")
+    }
+
+    func testStandaloneAnimationWidthBalancesTheClosedNotchMargins() {
+        let contentHeight: CGFloat = 26
+        let outerHeight: CGFloat = 38
+        let animation = AtollTrailingContent.animation(data: Data(), size: CGSize(width: 26, height: 26))
+
+        let standaloneWidth = ExtensionLayoutMetrics.standaloneEdgeWidth(
+            for: animation,
+            baseWidth: contentHeight
+        )
+        let pairedWidth = ExtensionLayoutMetrics.edgeWidth(
+            for: animation,
+            baseWidth: contentHeight
+        )
+
+        XCTAssertEqual(standaloneWidth, 26, "standalone uses root horizontal padding without adding it twice")
+        XCTAssertEqual((outerHeight - contentHeight) / 2, 6, "vertical margin comes from centered outer height")
+        XCTAssertEqual(pairedWidth, 42, "paired music wing keeps its existing 16pt animation inset")
     }
 
     func testFullHeightExtensionTabMatchesTerminalHeight() {
@@ -91,6 +115,14 @@ final class ExtensionTabPresentationTests: XCTestCase {
         XCTAssertEqual(contentWidth, 651, accuracy: 0.001)
         XCTAssertEqual((690 - contentWidth) / 2, 19.5, accuracy: 0.001)
         XCTAssertLessThan(contentWidth, 690)
+    }
+
+    func testFullHeightExtensionBottomBorderMatchesVisibleSideBorder() {
+        // Installed Hermes capture: 14px each side, 24px below at 2x.
+        // Reduce only this tab's bottom inset by 5pt (10px); keep native tabs.
+        XCTAssertEqual(ContentView.openBottomInset(isExtensionTab: true, fullHeightMode: true), 7)
+        XCTAssertEqual(ContentView.openBottomInset(isExtensionTab: true, fullHeightMode: false), 12)
+        XCTAssertEqual(ContentView.openBottomInset(isExtensionTab: false, fullHeightMode: true), 12)
     }
 
     func testUserActivatedHermesSessionLinkOpensAndCancelsNavigation() throws {

@@ -986,21 +986,21 @@ extension Defaults.Keys {
     static let updateChannel = Key<UpdateChannel>("updateChannel", default: .stable)
     static let logLevel = Key<LogLevel>("logLevel", default: .none)
     static let menubarIcon = Key<Bool>("menubarIcon", default: true)
-    static let showOnAllDisplays = Key<Bool>("showOnAllDisplays", default: false)
+    static let showOnAllDisplays = Key<Bool>("showOnAllDisplays", default: true)
     static let automaticallySwitchDisplay = Key<Bool>("automaticallySwitchDisplay", default: true)
     static let releaseName = Key<String>("releaseName", default: "Kaafu")
     static let hideDynamicIslandFromScreenCapture = Key<Bool>("hideDynamicIslandFromScreenCapture", default: false)
     
         // MARK: Behavior
-    static let minimumHoverDuration = Key<TimeInterval>("minimumHoverDuration", default: 0.3)
-    static let enableHaptics = Key<Bool>("enableHaptics", default: true)
-    static let openNotchOnHover = Key<Bool>("openNotchOnHover", default: true)
+    static let minimumHoverDuration = Key<TimeInterval>("minimumHoverDuration", default: 0.0)
+    static let enableHaptics = Key<Bool>("enableHaptics", default: false)
+    static let openNotchOnHover = Key<Bool>("openNotchOnHover", default: false)
 	static let extendHoverArea = Key<Bool>("extendHoverArea", default: false)
     static let externalDisplayStyle = Key<ExternalDisplayStyle>(
         "externalDisplayStyle",
-        default: .notch
+        default: .dynamicIsland
     )
-    static let hideNonNotchUntilHover = Key<Bool>("hideNonNotchUntilHover", default: false)
+    static let hideNonNotchUntilHover = Key<Bool>("hideNonNotchUntilHover", default: true)
     static let notchHeightMode = Key<WindowHeightMode>(
         "notchHeightMode",
         default: WindowHeightMode.matchRealNotchSize
@@ -1011,7 +1011,7 @@ extension Defaults.Keys {
     )
     static let nonNotchHeight = Key<CGFloat>("nonNotchHeight", default: 32)
     static let notchHeight = Key<CGFloat>("notchHeight", default: 32)
-    static let openNotchWidth = Key<CGFloat>("openNotchWidth", default: 640)
+    static let openNotchWidth = Key<CGFloat>("openNotchWidth", default: 690)
     static let closedNotchWidth = Key<CGFloat>("closedNotchWidth", default: 150)
     static let customizePhysicalNotchWidth = Key<Bool>("customizePhysicalNotchWidth", default: false)
         //static let openLastTabByDefault = Key<Bool>("openLastTabByDefault", default: false)
@@ -1019,7 +1019,7 @@ extension Defaults.Keys {
         // MARK: Appearance
     static let showEmojis = Key<Bool>("showEmojis", default: false)
         //static let alwaysShowTabs = Key<Bool>("alwaysShowTabs", default: true)
-    static let showMirror = Key<Bool>("showMirror", default: false)
+    static let showMirror = Key<Bool>("showMirror", default: true)
     static let mirrorShape = Key<MirrorShapeEnum>("mirrorShape", default: MirrorShapeEnum.rectangle)
     static let selectedCameraID = Key<String>("selectedCameraID", default: "")
     static let settingsIconInNotch = Key<Bool>("settingsIconInNotch", default: true)
@@ -1052,9 +1052,9 @@ extension Defaults.Keys {
     
         // MARK: Gestures
     static let enableGestures = Key<Bool>("enableGestures", default: true)
-    static let closeGestureEnabled = Key<Bool>("closeGestureEnabled", default: true)
+    static let closeGestureEnabled = Key<Bool>("closeGestureEnabled", default: false)
     static let gestureSensitivity = Key<CGFloat>("gestureSensitivity", default: 200.0)
-    static let enableHorizontalMusicGestures = Key<Bool>("enableHorizontalMusicGestures", default: true)
+    static let enableHorizontalMusicGestures = Key<Bool>("enableHorizontalMusicGestures", default: false)
     static let musicGestureBehavior = Key<MusicSkipBehavior>("musicGestureBehavior", default: .track)
     static let reverseSwipeGestures = Key<Bool>("reverseSwipeGestures", default: false)
     static let reverseScrollGestures = Key<Bool>("reverseScrollGestures", default: false)
@@ -1078,10 +1078,13 @@ extension Defaults.Keys {
     /// everybody, because a Lock Screen that is mostly artwork is the point for
     /// most people and a permanent slider is a preference, not an improvement.
     static let alwaysShowLockScreenVolume = Key<Bool>("alwaysShowLockScreenVolume", default: false)
-    static let musicAuxLeftControl = Key<MusicAuxiliaryControl>("musicAuxLeftControl", default: .shuffle)
-    static let musicAuxRightControl = Key<MusicAuxiliaryControl>("musicAuxRightControl", default: .repeatMode)
+    static let musicAuxLeftControl = Key<MusicAuxiliaryControl>("musicAuxLeftControl", default: .lyrics)
+    static let musicAuxRightControl = Key<MusicAuxiliaryControl>("musicAuxRightControl", default: .mediaOutput)
     static let didMigrateMusicAuxControls = Key<Bool>("didMigrateMusicAuxControls", default: false)
-    static let musicControlSlots = Key<[MusicControlButton]>("musicControlSlots", default: MusicControlButton.defaultLayout)
+    static let musicControlSlots = Key<[MusicControlButton]>(
+        "musicControlSlots",
+        default: [.lyrics, .trackBackward, .playPause, .trackForward, .mediaOutput]
+    )
     static let didMigrateMusicControlSlots = Key<Bool>("didMigrateMusicControlSlots", default: false)
     static let musicSkipBehavior = Key<MusicSkipBehavior>("musicSkipBehavior", default: .track)
     static let musicControlWindowEnabled = Key<Bool>("musicControlWindowEnabled", default: false)
@@ -1112,14 +1115,14 @@ extension Defaults.Keys {
         "lockScreenMusicPanelWidth",
         default: Double(LockScreenMusicPanel.defaultCollapsedWidth)
     )
-    static let lockScreenMusicAlbumParallaxEnabled = Key<Bool>("lockScreenMusicAlbumParallaxEnabled", default: false)
+    static let lockScreenMusicAlbumParallaxEnabled = Key<Bool>("lockScreenMusicAlbumParallaxEnabled", default: true)
     static let lockScreenTimerVerticalOffset = Key<Double>("lockScreenTimerVerticalOffset", default: 0)
     static let lockScreenTimerWidgetWidth = Key<Double>("lockScreenTimerWidgetWidth", default: 350)
     static let lockScreenWidgetAppearance = Key<LockScreenWidgetAppearance>("lockScreenWidgetAppearance", default: .dark)
     static let lockScreenGlassStyle = Key<LockScreenGlassStyle>("lockScreenGlassStyle", default: .liquid)
     static let lockScreenGlassCustomizationMode = Key<LockScreenGlassCustomizationMode>(
         "lockScreenGlassCustomizationMode",
-        default: .standard
+        default: .customLiquid
     )
     static let lockScreenTimerGlassStyle = Key<LockScreenGlassStyle>("lockScreenTimerGlassStyle", default: .frosted)
     static let lockScreenTimerGlassCustomizationMode = Key<LockScreenGlassCustomizationMode>(
@@ -1171,8 +1174,8 @@ extension Defaults.Keys {
     static let showPowerStatusNotifications = Key<Bool>("showPowerStatusNotifications", default: true)
     static let showBatteryIndicator = Key<Bool>("showBatteryIndicator", default: BatteryActivityManager.shared.hasBattery())
     static let showBatteryPercentage = Key<Bool>("showBatteryPercentage", default: true)
-    static let showBatteryPercentInside = Key<Bool>("showBatteryPercentInside", default: true)
-    static let showMinimalisticBatteryIndicator = Key<Bool>("showMinimalisticBatteryIndicator", default: true)
+    static let showBatteryPercentInside = Key<Bool>("showBatteryPercentInside", default: false)
+    static let showMinimalisticBatteryIndicator = Key<Bool>("showMinimalisticBatteryIndicator", default: false)
     static let showPowerStatusIcons = Key<Bool>("showPowerStatusIcons", default: true)
     static let playLowBatteryAlertSound = Key<Bool>("playLowBatteryAlertSound", default: true)
     static let showChargingBatteryHUD = Key<Bool>("showChargingBatteryHUD", default: true)
@@ -1199,7 +1202,7 @@ extension Defaults.Keys {
     static let enableDownloadListener = Key<Bool>("enableDownloadListener", default: true)
     static let enableSafariDownloads = Key<Bool>("enableSafariDownloads", default: true)
     static let selectedDownloadIndicatorStyle = Key<DownloadIndicatorStyle>("selectedDownloadIndicatorStyle", default: DownloadIndicatorStyle.progress)
-    static let showDownloadSpeed = Key<Bool>("showDownloadSpeed", default: false)
+    static let showDownloadSpeed = Key<Bool>("showDownloadSpeed", default: true)
     static let selectedDownloadIconStyle = Key<DownloadIconStyle>("selectedDownloadIconStyle", default: DownloadIconStyle.onlyAppIcon)
     
         // MARK: HUD
@@ -1212,7 +1215,7 @@ extension Defaults.Keys {
     static let showProgressPercentages = Key<Bool>("showProgressPercentages", default: true)
     
         // MARK: Shelf
-    static let dynamicShelf = Key<Bool>("dynamicShelf", default: true)
+    static let dynamicShelf = Key<Bool>("dynamicShelf", default: false)
     static let openShelfByDefault = Key<Bool>("openShelfByDefault", default: true)
         static let quickShareProvider = Key<String>("quickShareProvider", default: "AirDrop")
         static let localSendSelectedDeviceID = Key<String>("localSendSelectedDeviceID", default: "")
@@ -1240,7 +1243,7 @@ extension Defaults.Keys {
     static let enableWobbleAnimation = Key<Bool>("enableWobbleAnimation", default: false)
     
     // MARK: Media Controller
-    static let mediaController = Key<MediaControllerType>("mediaController", default: defaultMediaController)
+    static let mediaController = Key<MediaControllerType>("mediaController", default: .spotify)
     static let spotifySPDCCookie = Key<String>("spotifySPDCCookie", default: "")
     static let spotifyAuthAccessToken = Key<String>("spotifyAuthAccessToken", default: "")
     static let spotifyAuthAccessTokenExpiration = Key<Double>("spotifyAuthAccessTokenExpiration", default: 0)
@@ -1273,18 +1276,18 @@ extension Defaults.Keys {
     static let useColorCodedVolumeDisplay = Key<Bool>("useColorCodedVolumeDisplay", default: true)
     static let useSmoothColorGradient = Key<Bool>("useSmoothColorGradient", default: true)
     static let useCircularBluetoothBatteryIndicator = Key<Bool>("useCircularBluetoothBatteryIndicator", default: true)
-    static let showBluetoothBatteryPercentageText = Key<Bool>("showBluetoothBatteryPercentageText", default: false)
-    static let showBluetoothDeviceNameMarquee = Key<Bool>("showBluetoothDeviceNameMarquee", default: false)
+    static let showBluetoothBatteryPercentageText = Key<Bool>("showBluetoothBatteryPercentageText", default: true)
+    static let showBluetoothDeviceNameMarquee = Key<Bool>("showBluetoothDeviceNameMarquee", default: true)
     static let useBluetoothHUD3DIcon = Key<Bool>("useBluetoothHUD3DIcon", default: true)
     static let showAirPodsListeningModeChanges = Key<Bool>("showAirPodsListeningModeChanges", default: true)
     
     // MARK: Stats Feature
-    static let enableStatsFeature = Key<Bool>("enableStatsFeature", default: false)
+    static let enableStatsFeature = Key<Bool>("enableStatsFeature", default: true)
     static let enableLLMUsageFeature = Key<Bool>("enableLLMUsageFeature", default: false)
-    static let enableClaudeProvider = Key<Bool>("enableClaudeProvider", default: true)
+    static let enableClaudeProvider = Key<Bool>("enableClaudeProvider", default: false)
     static let enableCodexProvider = Key<Bool>("enableCodexProvider", default: true)
-    static let enableCursorProvider = Key<Bool>("enableCursorProvider", default: true)
-    static let enableAntigravityProvider = Key<Bool>("enableAntigravityProvider", default: true)
+    static let enableCursorProvider = Key<Bool>("enableCursorProvider", default: false)
+    static let enableAntigravityProvider = Key<Bool>("enableAntigravityProvider", default: false)
     static let enableNewAPIProvider = Key<Bool>("enableNewAPIProvider", default: false)
     static let newAPIAccounts = Key<[NewAPIAccount]>("newAPIAccounts", default: [])
     static let autoStartStatsMonitoring = Key<Bool>("autoStartStatsMonitoring", default: true)
@@ -1293,12 +1296,12 @@ extension Defaults.Keys {
     static let showCpuGraph = Key<Bool>("showCpuGraph", default: true)
     static let showMemoryGraph = Key<Bool>("showMemoryGraph", default: true)
     static let showGpuGraph = Key<Bool>("showGpuGraph", default: true)
-    static let showNetworkGraph = Key<Bool>("showNetworkGraph", default: false)
-    static let showDiskGraph = Key<Bool>("showDiskGraph", default: false)
+    static let showNetworkGraph = Key<Bool>("showNetworkGraph", default: true)
+    static let showDiskGraph = Key<Bool>("showDiskGraph", default: true)
     static let cpuTemperatureUnit = Key<LockScreenWeatherTemperatureUnit>("cpuTemperatureUnit", default: .matchingSystemPreference)
     
     // MARK: Terminal Feature
-    static let enableTerminalFeature = Key<Bool>("enableTerminalFeature", default: false)
+    static let enableTerminalFeature = Key<Bool>("enableTerminalFeature", default: true)
     static let terminalShellPath = Key<String>("terminalShellPath", default: "/bin/zsh")
     static let terminalFontFamily = Key<String>("terminalFontFamily", default: "")
     static let terminalFontSize = Key<Double>("terminalFontSize", default: 12.0)
@@ -1343,7 +1346,7 @@ extension Defaults.Keys {
     static let perAppVolumeLevels = Key<[String: Double]>("perAppVolumeLevels", default: [:])
     static let perAppVolumeMuted = Key<Set<String>>("perAppVolumeMuted", default: [])
     // MARK: Caffeinate Feature
-    static let enableCaffeinate = Key<Bool>("enableCaffeinate", default: true)
+    static let enableCaffeinate = Key<Bool>("enableCaffeinate", default: false)
     static let showCaffeinateIcon = Key<Bool>("showCaffeinateIcon", default: true)
     static let caffeinateDefaultDuration = Key<CaffeinateDuration>("caffeinateDefaultDuration", default: .indefinite)
     static let caffeinateKeepsDisplayAwake = Key<Bool>("caffeinateKeepsDisplayAwake", default: true)
@@ -1356,7 +1359,7 @@ extension Defaults.Keys {
     static let showColorPickerIcon = Key<Bool>("showColorPickerIcon", default: true)
     
     // MARK: Clipboard Feature
-    static let enableClipboardManager = Key<Bool>("enableClipboardManager", default: true)
+    static let enableClipboardManager = Key<Bool>("enableClipboardManager", default: false)
     static let clipboardHistorySize = Key<Int>("clipboardHistorySize", default: 3)
     /// Whether clipboard history is written to disk and restored on launch.
     /// Off keeps it in memory for the session only — nothing survives a quit.
@@ -1366,7 +1369,7 @@ extension Defaults.Keys {
     static let clipboardDisplayMode = Key<ClipboardDisplayMode>("clipboardDisplayMode", default: .panel)
     
     // MARK: Screen Assistant Feature
-    static let enableScreenAssistant = Key<Bool>("enableScreenAssistant", default: true)
+    static let enableScreenAssistant = Key<Bool>("enableScreenAssistant", default: false)
     static let screenAssistantDisplayMode = Key<ScreenAssistantDisplayMode>("screenAssistantDisplayMode", default: .panel)
     static let geminiApiKey = Key<String>("geminiApiKey", default: "")
     static let openaiApiKey = Key<String>("openaiApiKey", default: "")
@@ -1399,9 +1402,9 @@ extension Defaults.Keys {
     
     // MARK: System HUD Feature
     static let enableSystemHUD = Key<Bool>("enableSystemHUD", default: true)
-    static let enableVolumeHUD = Key<Bool>("enableVolumeHUD", default: true)
-    static let enableBrightnessHUD = Key<Bool>("enableBrightnessHUD", default: true)
-    static let enableKeyboardBacklightHUD = Key<Bool>("enableKeyboardBacklightHUD", default: true)
+    static let enableVolumeHUD = Key<Bool>("enableVolumeHUD", default: false)
+    static let enableBrightnessHUD = Key<Bool>("enableBrightnessHUD", default: false)
+    static let enableKeyboardBacklightHUD = Key<Bool>("enableKeyboardBacklightHUD", default: false)
     static let systemHUDSensitivity = Key<Int>("systemHUDSensitivity", default: 5)
     static let playVolumeChangeFeedback = Key<Bool>("playVolumeChangeFeedback", default: false)
 
@@ -1475,7 +1478,7 @@ extension Defaults.Keys {
 
     // MARK: Focus / Do Not Disturb Detection
     static let enableDoNotDisturbDetection = Key<Bool>("enableDoNotDisturbDetection", default: true)
-    static let focusMonitoringMode = Key<FocusMonitoringMode>("focusMonitoringMode", default: .withoutDevTools)
+    static let focusMonitoringMode = Key<FocusMonitoringMode>("focusMonitoringMode", default: .useDevTools)
     static let showDoNotDisturbIndicator = Key<Bool>("showDoNotDisturbIndicator", default: true)
     static let showDoNotDisturbLabel = Key<Bool>("showDoNotDisturbLabel", default: true)
     static let focusIndicatorNonPersistent = Key<Bool>("focusIndicatorNonPersistent", default: false)

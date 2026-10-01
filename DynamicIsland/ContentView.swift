@@ -429,9 +429,19 @@ struct ContentView: View {
         return screen.safeAreaInsets.top <= 0
     }
 
+    /// Extension peeks are closed-notch notifications. An open extension tab
+    /// already displays its live state, and inserting the peek into its header
+    /// can consume the tab's height during a completion update.
+    static func shouldPresentExtensionActivityInHeader(notchState: NotchState) -> Bool {
+        notchState == .closed
+    }
+
     /// Whether the global sneak peek is visible on this specific screen.
     private var isSneakPeekVisibleOnCurrentScreen: Bool {
         guard coordinator.sneakPeek.show else { return false }
+        if coordinator.sneakPeek.type.isExtensionPayload && !Self.shouldPresentExtensionActivityInHeader(notchState: vm.notchState) {
+            return false
+        }
         guard Defaults[.showOnAllDisplays] else { return true }
         guard let targetScreenName = coordinator.sneakPeek.targetScreenName else { return true }
         return currentScreenName == targetScreenName
@@ -650,6 +660,19 @@ struct ContentView: View {
         installRootLifecycleHandlers(on: rootBodyView)
     }
 
+    static func openBottomInset(isExtensionTab: Bool, fullHeightMode: Bool) -> CGFloat {
+        // In the full-height web tab the visible 2x border measured 14px on
+        // either side but 24px below. Keep every other notch tab unchanged.
+        isExtensionTab && fullHeightMode ? 7 : 12
+    }
+
+    private var openBottomInset: CGFloat {
+        Self.openBottomInset(
+            isExtensionTab: coordinator.currentView == .extensionExperience,
+            fullHeightMode: fullHeightExtensionTabs
+        )
+    }
+
     private var mainLayoutBase: some View {
         NotchLayout()
             .frame(alignment: .top)
@@ -657,7 +680,8 @@ struct ContentView: View {
             // Applying the regular closed-notch inset here makes that surface
             // wider than both the root view and its NSWindow, clipping both sides.
             .padding(.horizontal, isConnectivityHUDVisible ? 0 : notchHorizontalPadding)
-            .padding([.horizontal, .bottom], vm.notchState == .open ? 12 : 0)
+            .padding(.horizontal, vm.notchState == .open ? 12 : 0)
+            .padding(.bottom, vm.notchState == .open ? openBottomInset : 0)
             .background(.black)
             .clipShape(resolvedClipShape)
             // Keep the anti-gap fill outside the clipped notch. The window sits
@@ -860,7 +884,7 @@ struct ContentView: View {
         }
         .frame(
             maxWidth: (dynamicNotchSize.width + (vm.notchState == .open ? 24 : 0) + (isDynamicIslandMode ? dynamicIslandShadowInset * 2 : 0)).rounded(),
-            maxHeight: (dynamicNotchSize.height + (vm.notchState == .open ? 12 : 0) + (isIslandMode ? 0 : notchTopScreenBleedAmount) + (isDynamicIslandMode ? dynamicIslandTopOffset + dynamicIslandShadowInset * 2 : currentShadowPadding)).rounded(),
+            maxHeight: (dynamicNotchSize.height + (vm.notchState == .open ? openBottomInset : 0) + (isIslandMode ? 0 : notchTopScreenBleedAmount) + (isDynamicIslandMode ? dynamicIslandTopOffset + dynamicIslandShadowInset * 2 : currentShadowPadding)).rounded(),
             alignment: .top
         )
         .animation(nil, value: vm.notchState)
@@ -1150,7 +1174,7 @@ struct ContentView: View {
                           DoNotDisturbLiveActivity()
                     } else if (!isCurrentScreenExpansionVisible || currentScreenExpansionType == .privacy) && vm.notchState == .closed && privacyManager.hasAnyIndicator && (Defaults[.enableCameraDetection] || Defaults[.enableMicrophoneDetection]) && !vm.hideOnClosed {
                         PrivacyLiveActivity()
-                      } else if let extensionPayload = extensionStandalonePayload {
+                      } else if vm.notchState == .closed, let extensionPayload = extensionStandalonePayload {
                           let layout = extensionStandaloneLayout(
                               for: extensionPayload,
                               notchHeight: vm.effectiveClosedNotchHeight,
@@ -1161,6 +1185,10 @@ struct ContentView: View {
                               layout: layout,
                               isHovering: isHovering
                           )
+                          // Same closed-notch swap as the music wing: a new Hermes
+                          // session must grow the wing with the scale/opacity
+                          // spring instead of popping straight to its final frame.
+                          .transition(closedLiveActivitySwapTransition)
                       } else if !coordinator.expandingView.show && vm.notchState == .closed && !shelfState.isEmpty && !vm.hideOnClosed && !lockScreenManager.isLocked && !enableMinimalisticUI {
                           ShelfInlineLiveActivity()
                               .transition(.opacity.animation(.smooth(duration: 0.25)))
@@ -2008,7 +2036,7 @@ struct ContentView: View {
             baseWidth: contentHeight
         )
         let centerWidth: CGFloat = max(vm.closedNotchSize.width + (isHovering ? 8 : 0), 96)
-        let trailingWidth = ExtensionLayoutMetrics.trailingWidth(
+        let trailingWidth = ExtensionLayoutMetrics.standaloneTrailingWidth(
             for: payload,
             baseWidth: contentHeight,
             maxWidth: contentHeight + centerWidth * 0.6
