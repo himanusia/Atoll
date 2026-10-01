@@ -33,3 +33,24 @@ func isClosedMusicPairingEligible(
         && !isLocked
         && !isDeferredAfterUnlock
 }
+
+/// Whether a closed-notch live activity (timer, reminder, recording, download,
+/// LocalSend, Focus, privacy, shelf) may render the extension wing beside it.
+///
+/// Mirrors `isClosedMusicPairingEligible` without music-specific requirements:
+/// any coexistence-eligible extension payload rides along with every surface
+/// that owns the closed notch, so the Hermes session count stays visible
+/// during calls and the other closed live activities - not only with music.
+func isClosedExtensionPairingEligible(
+    notchState: NotchState,
+    hasCoexistingPayload: Bool,
+    extensionLiveActivitiesEnabled: Bool,
+    hideOnClosed: Bool,
+    isLocked: Bool
+) -> Bool {
+    notchState == .closed
+        && hasCoexistingPayload
+        && extensionLiveActivitiesEnabled
+        && !hideOnClosed
+        && !isLocked
+}

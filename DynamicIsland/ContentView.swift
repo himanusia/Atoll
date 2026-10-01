@@ -1159,21 +1159,27 @@ struct ContentView: View {
                               .id("closed-music-live-activity")
                               .transition(closedLiveActivitySwapTransition)
                       } else if (!isCurrentScreenExpansionVisible || currentScreenExpansionType == .timer) && vm.notchState == .closed && timerManager.isTimerActive && coordinator.timerLiveActivityEnabled && !vm.hideOnClosed {
-                          TimerLiveActivity()
+                          closedExtensionPaired { TimerLiveActivity() }
                       } else if (!isCurrentScreenExpansionVisible || currentScreenExpansionType == .reminder) && vm.notchState == .closed && reminderManager.isActive && enableReminderLiveActivity && !vm.hideOnClosed {
-                          ReminderLiveActivity()
+                          closedExtensionPaired { ReminderLiveActivity() }
                       } else if (!isCurrentScreenExpansionVisible || currentScreenExpansionType == .recording) && vm.notchState == .closed && recordingManager.isRecording && Defaults[.enableScreenRecordingDetection] && Defaults[.showRecordingIndicator] && !vm.hideOnClosed && !musicPairingEligible {
-                          RecordingLiveActivity(hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
+                          closedExtensionPaired {
+                              RecordingLiveActivity(hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
+                          }
                       } else if (!isCurrentScreenExpansionVisible || currentScreenExpansionType == .download) && vm.notchState == .closed && downloadManager.isDownloading && Defaults[.enableDownloadListener] && !vm.hideOnClosed {
-                          DownloadLiveActivity()
-                              .transition(.blurReplace.animation(.interactiveSpring(dampingFraction: 1.2)))
+                          closedExtensionPaired {
+                              DownloadLiveActivity()
+                                  .transition(.blurReplace.animation(.interactiveSpring(dampingFraction: 1.2)))
+                          }
                       } else if !isCurrentScreenExpansionVisible && vm.notchState == .closed && localSendLiveActivityActive && !vm.hideOnClosed {
-                          LocalSendLiveActivity()
-                              .transition(.blurReplace.animation(.interactiveSpring(dampingFraction: 1.2)))
+                          closedExtensionPaired {
+                              LocalSendLiveActivity()
+                                  .transition(.blurReplace.animation(.interactiveSpring(dampingFraction: 1.2)))
+                          }
                       } else if (!isCurrentScreenExpansionVisible || currentScreenExpansionType == .doNotDisturb) && vm.notchState == .closed && Defaults[.enableDoNotDisturbDetection] && Defaults[.showDoNotDisturbIndicator] && (doNotDisturbManager.isDoNotDisturbActive || doNotDisturbManager.isFocusToastDismissing) && !vm.hideOnClosed && !lockScreenManager.isLocked {
-                          DoNotDisturbLiveActivity()
+                          closedExtensionPaired { DoNotDisturbLiveActivity() }
                     } else if (!isCurrentScreenExpansionVisible || currentScreenExpansionType == .privacy) && vm.notchState == .closed && privacyManager.hasAnyIndicator && (Defaults[.enableCameraDetection] || Defaults[.enableMicrophoneDetection]) && !vm.hideOnClosed {
-                        PrivacyLiveActivity()
+                        closedExtensionPaired { PrivacyLiveActivity() }
                       } else if vm.notchState == .closed, let extensionPayload = extensionStandalonePayload {
                           let layout = extensionStandaloneLayout(
                               for: extensionPayload,
@@ -1190,8 +1196,10 @@ struct ContentView: View {
                           // spring instead of popping straight to its final frame.
                           .transition(closedLiveActivitySwapTransition)
                       } else if !coordinator.expandingView.show && vm.notchState == .closed && !shelfState.isEmpty && !vm.hideOnClosed && !lockScreenManager.isLocked && !enableMinimalisticUI {
-                          ShelfInlineLiveActivity()
-                              .transition(.opacity.animation(.smooth(duration: 0.25)))
+                          closedExtensionPaired {
+                              ShelfInlineLiveActivity()
+                                  .transition(.opacity.animation(.smooth(duration: 0.25)))
+                          }
                       } else if !isCurrentScreenExpansionVisible && vm.notchState == .closed && (!musicManager.isPlaying && musicManager.isPlayerIdle) && Defaults[.showNotHumanFace] && !vm.hideOnClosed  {
                           DynamicIslandFaceAnimation().animation(.interactiveSpring, value: musicManager.isPlayerIdle)
                       } else if vm.notchState == .open {
@@ -1860,6 +1868,70 @@ struct ContentView: View {
         return payload.id
     }
 
+    /// Extension payload that may ride beside the closed-notch surface which
+    /// owns the notch (timer, reminder, recording, download, LocalSend, Focus,
+    /// privacy, shelf). Music has its own pairing path; this one keeps the
+    /// Hermes session count visible during calls and the other closed live
+    /// activities instead of only while a player is running.
+    private func resolvedExtensionPairingPayload() -> ExtensionLiveActivityPayload? {
+        let candidates = extensionLiveActivityManager.sortedActivities(for: true)
+        guard let payload = candidates.first else {
+            ExtensionRoutingDiagnostics.shared.logSuppression(
+                .pairing,
+                reason: "no eligible coexistence payloads",
+                pendingCount: 0
+            )
+            ExtensionRoutingDiagnostics.shared.reset(.pairing)
+            return nil
+        }
+
+        guard isClosedExtensionPairingEligible(
+            notchState: vm.notchState,
+            hasCoexistingPayload: true,
+            extensionLiveActivitiesEnabled: enableExtensionLiveActivities,
+            hideOnClosed: vm.hideOnClosed,
+            isLocked: lockScreenManager.isLocked
+        ) else {
+            ExtensionRoutingDiagnostics.shared.logSuppression(
+                .pairing,
+                reason: "closed-notch pairing guards not met",
+                pendingCount: candidates.count
+            )
+            return nil
+        }
+
+        ExtensionRoutingDiagnostics.shared.logDisplay(.pairing, payload: payload)
+        return payload
+    }
+
+    /// Renders a closed-notch surface with the extension wing appended on the
+    /// right whenever a coexistence-eligible payload is present. The wing uses
+    /// the same slot budget as the music pairing so the closed notch keeps one
+    /// consistent trailing treatment across every live activity.
+    private func closedExtensionPaired<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        let contentHeight = max(0, vm.effectiveClosedNotchHeight - (isHovering ? 0 : 12))
+        let centerWidth = max(vm.closedNotchSize.width, 96)
+        return HStack(spacing: 0) {
+            content()
+            if let payload = resolvedExtensionPairingPayload() {
+                let wingWidth = ExtensionLayoutMetrics.trailingWidth(
+                    for: payload,
+                    baseWidth: contentHeight,
+                    maxWidth: contentHeight + centerWidth * 0.6
+                )
+                ExtensionMusicWingView(
+                    payload: payload,
+                    notchHeight: contentHeight,
+                    trailingWidth: wingWidth,
+                    compactStandalone: false
+                )
+                .frame(width: wingWidth, height: contentHeight)
+                .transition(closedLiveActivitySwapTransition)
+                .animation(.smooth(duration: 0.25), value: payload.id)
+            }
+        }
+    }
+
     private func resolvedExtensionMusicPayload() -> ExtensionLiveActivityPayload? {
         let candidates = extensionLiveActivityManager.sortedActivities(for: true)
         guard let payload = candidates.first else {
@@ -2059,6 +2131,7 @@ struct ContentView: View {
         enum Channel: Hashable {
             case music
             case standalone
+            case pairing
 
             var label: String {
                 switch self {
@@ -2066,6 +2139,8 @@ struct ContentView: View {
                     return "music pairing"
                 case .standalone:
                     return "standalone notch"
+                case .pairing:
+                    return "surface pairing"
                 }
             }
         }

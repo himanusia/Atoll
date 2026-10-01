@@ -256,4 +256,54 @@ final class ExtensionTabPresentationTests: XCTestCase {
         )
         XCTAssertEqual(remotePolicy.decide(url: remoteURL, navigationType: .other), .allow)
     }
+
+    func testClosedExtensionPairingGuardsMatchTheClosedNotchContract() {
+        XCTAssertTrue(isClosedExtensionPairingEligible(
+            notchState: .closed,
+            hasCoexistingPayload: true,
+            extensionLiveActivitiesEnabled: true,
+            hideOnClosed: false,
+            isLocked: false
+        ), "a coexistence-eligible payload may ride beside a closed live activity")
+
+        XCTAssertFalse(isClosedExtensionPairingEligible(
+            notchState: .open,
+            hasCoexistingPayload: true,
+            extensionLiveActivitiesEnabled: true,
+            hideOnClosed: false,
+            isLocked: false
+        ), "pairing belongs to the closed notch only")
+
+        XCTAssertFalse(isClosedExtensionPairingEligible(
+            notchState: .closed,
+            hasCoexistingPayload: false,
+            extensionLiveActivitiesEnabled: true,
+            hideOnClosed: false,
+            isLocked: false
+        ), "no coexistence-eligible payload means no wing")
+
+        XCTAssertFalse(isClosedExtensionPairingEligible(
+            notchState: .closed,
+            hasCoexistingPayload: true,
+            extensionLiveActivitiesEnabled: false,
+            hideOnClosed: false,
+            isLocked: false
+        ), "the live-activity toggle must gate the wing")
+
+        XCTAssertFalse(isClosedExtensionPairingEligible(
+            notchState: .closed,
+            hasCoexistingPayload: true,
+            extensionLiveActivitiesEnabled: true,
+            hideOnClosed: true,
+            isLocked: false
+        ), "fullscreen hide must gate the wing")
+
+        XCTAssertFalse(isClosedExtensionPairingEligible(
+            notchState: .closed,
+            hasCoexistingPayload: true,
+            extensionLiveActivitiesEnabled: true,
+            hideOnClosed: false,
+            isLocked: true
+        ), "the lock screen must gate the wing")
+    }
 }
