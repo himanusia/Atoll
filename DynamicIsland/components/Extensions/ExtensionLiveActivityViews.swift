@@ -95,16 +95,25 @@ struct ExtensionMusicWingView: View {
         resolvedExtensionTrailingRenderable(for: descriptor)
     }
 
+    private var usesCenteredPairedLayout: Bool {
+        switch trailingRenderable {
+        case let .content(content):
+            return ExtensionLayoutMetrics.usesCenteredPairedLayout(for: content)
+        case .indicator:
+            return false
+        }
+    }
+
     var body: some View {
         Group {
-            if compactStandalone {
-                // Music's closed wing centers its contents in the full 26pt
-                // height. The paired-extension inset (8pt right / 6pt top)
-                // instead shifts a standalone digit up and left, and clips
-                // its 16pt glyph in the 26pt-high slot.
+            if compactStandalone || usesCenteredPairedLayout {
+                // The root notch already supplies the closed horizontal inset.
+                // Music's outer frame supplies the vertical centering inset.
                 wingContent(alignment: .center)
                     .frame(width: trailingWidth, height: notchHeight, alignment: .center)
             } else {
+                // Keep the established paired Music layout for text, icons,
+                // indicators, and other non-animation extension content.
                 VStack(alignment: .trailing, spacing: 6) {
                     wingContent(alignment: .trailing)
                         .frame(maxWidth: .infinity, alignment: .trailing)

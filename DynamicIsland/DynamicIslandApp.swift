@@ -600,6 +600,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let standaloneExtensionWidth = standaloneExtensionWidthForWindow() {
             result.width = max(result.width, standaloneExtensionWidth)
         }
+        if let pairedExtensionWidth = pairedExtensionWidthForWindow() {
+            result.width = max(result.width, pairedExtensionWidth)
+        }
         return result
     }
 
@@ -636,8 +639,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return leadingWidth + centerWidth + trailingWidth
     }
 
+    private func pairedExtensionWidthForWindow() -> CGFloat? {
+        guard vm.notchState == .closed,
+              !vm.hideOnClosed,
+              !LockScreenManager.shared.isLocked,
+              Defaults[.enableExtensionLiveActivities],
+              vm.effectiveClosedNotchHeight > 0,
+              closedMusicPairingEligibleForSizing(),
+              let payload = ExtensionLiveActivityManager.shared.sortedActivities(for: true).first else {
+            return nil
+        }
+
+        let contentHeight = max(0, vm.effectiveClosedNotchHeight - 12)
+        let centerWidth = max(vm.closedNotchSize.width, 96)
+        let trailingWidth = ExtensionLayoutMetrics.trailingWidth(
+            for: payload,
+            baseWidth: contentHeight,
+            maxWidth: contentHeight + centerWidth * 0.6
+        )
+        return contentHeight + centerWidth + trailingWidth
+    }
+
     private func recordingHUDLayoutForSizing() -> RecordingHUDLayout {
-        makeRecordingHUDLayout(
+        return makeRecordingHUDLayout(
             notchState: vm.notchState,
             screenRecordingDetectionEnabled: Defaults[.enableScreenRecordingDetection],
             showRecordingIndicator: Defaults[.showRecordingIndicator],

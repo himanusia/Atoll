@@ -1,5 +1,6 @@
 import XCTest
 import WebKit
+import AtollExtensionKit
 @testable import Atoll
 
 @MainActor
@@ -24,7 +25,7 @@ final class ExtensionTabPresentationTests: XCTestCase {
         ), 26, "running digit fits native music's 26pt right wing")
     }
 
-    func testStandaloneAnimationWidthBalancesTheClosedNotchMargins() {
+    func testPairedAnimationUsesRootInsetsInsteadOfAnInnerSideMargin() {
         let contentHeight: CGFloat = 26
         let outerHeight: CGFloat = 38
         let animation = AtollTrailingContent.animation(data: Data(), size: CGSize(width: 26, height: 26))
@@ -39,8 +40,11 @@ final class ExtensionTabPresentationTests: XCTestCase {
         )
 
         XCTAssertEqual(standaloneWidth, 26, "standalone uses root horizontal padding without adding it twice")
-        XCTAssertEqual((outerHeight - contentHeight) / 2, 6, "vertical margin comes from centered outer height")
-        XCTAssertEqual(pairedWidth, 42, "paired music wing keeps its existing 16pt animation inset")
+        XCTAssertEqual(pairedWidth, 26, "paired animation must use its content width; the root supplies horizontal padding")
+        XCTAssertTrue(ExtensionLayoutMetrics.usesCenteredPairedLayout(for: animation))
+        XCTAssertEqual(contentHeight + 584 + pairedWidth, 636, "window sizing must reserve the same paired width as the wing")
+        XCTAssertEqual((outerHeight - contentHeight) / 2, 6, "Music's outer frame supplies the vertical inset")
+        XCTAssertEqual(cornerRadiusInsets.closed.bottom, 14, "the closed root supplies the horizontal inset")
     }
 
     func testFullHeightExtensionTabMatchesTerminalHeight() {
