@@ -281,3 +281,13 @@ final class NativeFullscreenDecisionTests: XCTestCase {
         XCTAssertTrue(isNativeFullscreenDecision(spaceIsFullscreen: nil, accessibilityTrusted: true, axFullscreen: true))
     }
 }
+
+final class LaunchFullscreenDefaultTests: XCTestCase {
+    @MainActor
+    func testClosedNotchStartsVisibleBeforeTheFirstFullscreenStatus() {
+        // The detector publishes its first status asynchronously. Until then the
+        // closed notch must not be treated as fullscreen, or every launch hides
+        // the closed-notch live activities for a moment.
+        XCTAssertFalse(DynamicIslandViewModel().hideOnClosed)
+    }
+}

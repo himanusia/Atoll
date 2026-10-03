@@ -1868,7 +1868,6 @@ struct ContentView: View {
                 reason: "no eligible coexistence payloads",
                 pendingCount: candidates.count
             )
-            ExtensionRoutingDiagnostics.shared.reset(.music)
             return nil
         }
 
@@ -1947,7 +1946,6 @@ struct ContentView: View {
                 reason: "no active extension payloads",
                 pendingCount: 0
             )
-            ExtensionRoutingDiagnostics.shared.reset(.standalone)
             return nil
         }
 
@@ -1965,7 +1963,6 @@ struct ContentView: View {
                     reason: "no standalone payloads after filtering",
                     pendingCount: baseCandidates.count
                 )
-                ExtensionRoutingDiagnostics.shared.reset(.standalone)
             }
             return nil
         }
@@ -2078,10 +2075,6 @@ struct ContentView: View {
 
         func logDisplay(_ channel: Channel, payload: ExtensionLiveActivityPayload) {
             log("Extension \(channel.label) showing \(payload.descriptor.id) from \(payload.bundleIdentifier)", channel: channel)
-        }
-
-        func reset(_ channel: Channel) {
-            lastMessages.removeValue(forKey: channel)
         }
 
         private func log(_ message: String, channel: Channel) {

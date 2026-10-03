@@ -42,7 +42,11 @@ class DynamicIslandViewModel: NSObject, ObservableObject {
     /// borderless panels, preventing leaked hover-polling Tasks from accumulating.
     var onViewTeardown: (() -> Void)?
     
-    @Published var hideOnClosed: Bool = true
+    /// Starts visible: the fullscreen detector publishes its first status a
+    /// run-loop turn after launch, and a `true` default treated every launch as
+    /// fullscreen until then, hiding closed-notch live activities for a moment.
+    /// A missing signal never means fullscreen.
+    @Published var hideOnClosed: Bool = false
     @Published var isHoveringCalendar: Bool = false
     @Published var isBatteryPopoverActive: Bool = false
     @Published var isClipboardPopoverActive: Bool = false
