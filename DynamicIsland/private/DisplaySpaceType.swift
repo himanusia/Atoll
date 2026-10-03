@@ -55,7 +55,8 @@ enum DisplaySpaceType {
     }
 }
 
-private typealias CGSConnectionID = UInt32
+// Must match the declaration in CGSSpace.swift: both files link the same symbol.
+private typealias CGSConnectionID = UInt
 @_silgen_name("_CGSDefaultConnection")
 private func _CGSDefaultConnection() -> CGSConnectionID
 @_silgen_name("CGSCopyManagedDisplaySpaces")
