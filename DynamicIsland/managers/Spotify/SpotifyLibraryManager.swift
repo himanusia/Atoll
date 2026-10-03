@@ -135,8 +135,23 @@ final class SpotifyLibraryManager: ObservableObject {
 
     // MARK: - State
 
+    /// Runs a Keychain read away from the main actor. Even with the
+    /// non-interactive query above, a stalling Keychain call must not be able to
+    /// hold up the notch, so the read never runs on the main thread.
+    private nonisolated static func hasStoredRefreshToken(in store: SpotifyTokenStoring) async -> Bool {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                continuation.resume(returning: !(store.read(.refreshToken) ?? "").isEmpty)
+            }
+        }
+    }
+
     private func refreshAuthenticationState() {
-        let hasRefreshToken = !(tokenStore.read(.refreshToken) ?? "").isEmpty
-        isAuthenticated = hasRefreshToken && !configuredClientID.isEmpty
+        let store = tokenStore
+        let clientID = configuredClientID
+        Task { [weak self] in
+            let hasRefreshToken = await Self.hasStoredRefreshToken(in: store)
+            self?.isAuthenticated = hasRefreshToken && !clientID.isEmpty
+        }
     }
 }

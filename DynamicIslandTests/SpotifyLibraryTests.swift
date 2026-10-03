@@ -255,6 +255,46 @@ final class SpotifyLibraryTests: XCTestCase {
         XCTAssertEqual(Defaults[.spotifyLibraryRefreshToken], "legacy-refresh")
     }
 
+    // MARK: - A Keychain read must never freeze the app
+
+    private final class BlockingTokenStore: SpotifyTokenStoring, @unchecked Sendable {
+        private let delay: TimeInterval
+        init(delay: TimeInterval) { self.delay = delay }
+        func read(_ account: SpotifyTokenAccount) -> String? {
+            Thread.sleep(forTimeInterval: delay)
+            return nil
+        }
+        @discardableResult
+        func write(_ value: String, account: SpotifyTokenAccount) -> OSStatus { errSecSuccess }
+        @discardableResult
+        func delete(_ account: SpotifyTokenAccount) -> OSStatus { errSecSuccess }
+    }
+
+    func testKeychainReadQueryRefusesInteractiveAuthentication() {
+        let query = KeychainSpotifyTokenStore().readQuery(for: .refreshToken)
+        XCTAssertEqual(query[kSecClass as String] as? String, kSecClassGenericPassword as String)
+        XCTAssertEqual(
+            query[kSecUseAuthenticationUI as String] as? String,
+            kSecUseAuthenticationUIFail as String,
+            "A read that would prompt has to fail instead: the prompt blocks its thread, and on the main thread it froze the notch and the extension RPC"
+        )
+    }
+
+    func testSlowKeychainReadDoesNotBlockTheMainActor() async {
+        let manager = SpotifyLibraryManager(
+            tokenStore: BlockingTokenStore(delay: 0.6),
+            httpClient: FakeHTTPClient(),
+            authSession: NoopAuthSession()
+        )
+        let start = Date()
+        await MainActor.run {}
+        XCTAssertLessThan(
+            Date().timeIntervalSince(start), 0.3,
+            "The Spotify token read must not run on the main actor"
+        )
+        _ = manager
+    }
+
     func testMigrationClearsDefaultsOnSuccessfulWrite() {
         Defaults[.spotifyLibraryAccessToken] = "legacy-access"
         Defaults[.spotifyLibraryRefreshToken] = "legacy-refresh"
