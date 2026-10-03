@@ -257,3 +257,27 @@ final class ExtensionTabPresentationTests: XCTestCase {
         XCTAssertEqual(remotePolicy.decide(url: remoteURL, navigationType: .other), .allow)
     }
 }
+
+final class NativeFullscreenDecisionTests: XCTestCase {
+    func testMaximizedWindowWithoutAccessibilityIsNotFullscreen() {
+        // Regression: a maximized now-playing window used to hide the closed
+        // notch (and the Hermes session count) whenever Accessibility was not
+        // granted, because the fallback answered `true`.
+        XCTAssertFalse(isNativeFullscreenDecision(spaceIsFullscreen: false, accessibilityTrusted: false, axFullscreen: false))
+        XCTAssertFalse(isNativeFullscreenDecision(spaceIsFullscreen: nil, accessibilityTrusted: false, axFullscreen: false))
+    }
+
+    func testFullscreenSpaceWithoutAccessibilityIsFullscreen() {
+        XCTAssertTrue(isNativeFullscreenDecision(spaceIsFullscreen: true, accessibilityTrusted: false, axFullscreen: false))
+    }
+
+    func testDesktopSpaceOverridesStaleAccessibilityFlag() {
+        XCTAssertFalse(isNativeFullscreenDecision(spaceIsFullscreen: false, accessibilityTrusted: true, axFullscreen: true))
+    }
+
+    func testAccessibilityDecidesInsideFullscreenOrUnknownSpace() {
+        XCTAssertTrue(isNativeFullscreenDecision(spaceIsFullscreen: true, accessibilityTrusted: true, axFullscreen: true))
+        XCTAssertFalse(isNativeFullscreenDecision(spaceIsFullscreen: true, accessibilityTrusted: true, axFullscreen: false))
+        XCTAssertTrue(isNativeFullscreenDecision(spaceIsFullscreen: nil, accessibilityTrusted: true, axFullscreen: true))
+    }
+}
