@@ -46,13 +46,23 @@ struct KeychainSpotifyTokenStore: SpotifyTokenStoring {
         ]
     }
 
-    func read(_ account: SpotifyTokenAccount) -> String? {
+    /// The read query, exposed so tests can pin the non-interactive contract.
+    func readQuery(for account: SpotifyTokenAccount) -> [String: Any] {
         var query = baseQuery(for: account)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
+        // Never let a read wait for user authentication. A Keychain prompt runs
+        // the SecurityAgent dialog and blocks the calling thread until it is
+        // answered; on the main thread that freezes the whole app, so the closed
+        // notch and the extension RPC stop updating. Failing the read instead
+        // only reports Spotify as not connected.
+        query[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail
+        return query
+    }
 
+    func read(_ account: SpotifyTokenAccount) -> String? {
         var item: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
+        guard SecItemCopyMatching(readQuery(for: account) as CFDictionary, &item) == errSecSuccess,
               let data = item as? Data
         else { return nil }
         return String(data: data, encoding: .utf8)
