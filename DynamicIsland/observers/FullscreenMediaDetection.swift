@@ -52,6 +52,17 @@ class FullscreenMediaDetector: ObservableObject {
                     }
                 }
                 
+                for name in [
+                    NSWorkspace.didActivateApplicationNotification,
+                    NSWorkspace.didTerminateApplicationNotification,
+                ] {
+                    group.addTask {
+                        for await _ in NSWorkspace.shared.notificationCenter.notifications(named: name) {
+                            await self?.handleChange()
+                        }
+                    }
+                }
+
                 group.addTask {
                     let screenParameterNotifications = NSWorkspace.shared.notificationCenter.notifications(
                         named:  NSApplication.didChangeScreenParametersNotification
@@ -120,8 +131,15 @@ class FullscreenMediaDetector: ObservableObject {
     /// apart — the Accessibility `AXFullScreen` attribute can. Falls back to the detector's
     /// frame-based result when Accessibility isn't trusted (so behavior doesn't silently break).
     private func isInNativeFullscreen(_ app: MacroVisionKit.FullscreenWindowInfo) -> Bool {
-        guard AXIsProcessTrusted() else { return true }
+        let trusted = AXIsProcessTrusted()
+        return isNativeFullscreenDecision(
+            spaceIsFullscreen: DisplaySpaceType.isCurrentSpaceFullscreen(on: app.screen),
+            accessibilityTrusted: trusted,
+            axFullscreen: trusted && hasAXFullscreenWindow(app)
+        )
+    }
 
+    private func hasAXFullscreenWindow(_ app: MacroVisionKit.FullscreenWindowInfo) -> Bool {
         let appElement = AXUIElementCreateApplication(app.processId)
 
         // Prefer the focused window, then fall back to scanning all windows.
