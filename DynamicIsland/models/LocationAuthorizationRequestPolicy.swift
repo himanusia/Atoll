@@ -15,9 +15,41 @@ enum LocationAuthorizationRequestPolicy {
         guard status == .notDetermined else { return false }
 
         switch trigger {
+        case .appLaunch, .weatherFeatureEnabled, .weatherWidgetDisplayed:
+            return false
+        case .explicitUserAction:
+            return true
+        }
+    }
+}
+
+enum AccessibilityPermissionPromptTrigger {
+    case appStartup
+    case explicitUserAction
+}
+
+enum AccessibilityPermissionPromptPolicy {
+    static func shouldPrompt(for trigger: AccessibilityPermissionPromptTrigger) -> Bool {
+        switch trigger {
+        case .appStartup:
+            return false
+        case .explicitUserAction:
+            return true
+        }
+    }
+}
+
+enum DownloadsFolderAccessRequestTrigger {
+    case appLaunch
+    case userEnabledListener
+}
+
+enum DownloadsFolderAccessRequestPolicy {
+    static func shouldProbe(for trigger: DownloadsFolderAccessRequestTrigger) -> Bool {
+        switch trigger {
         case .appLaunch:
             return false
-        case .explicitUserAction, .weatherFeatureEnabled, .weatherWidgetDisplayed:
+        case .userEnabledListener:
             return true
         }
     }

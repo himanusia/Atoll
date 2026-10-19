@@ -170,7 +170,9 @@ final class MediaKeyInterceptor {
         }
 
 #if canImport(ApplicationServices)
-        requestAccessibilityPermissionIfNeeded()
+        if AccessibilityPermissionPromptPolicy.shouldPrompt(for: .appStartup) {
+            requestAccessibilityPermissionIfNeeded()
+        }
 #endif
 
         if installTap() {

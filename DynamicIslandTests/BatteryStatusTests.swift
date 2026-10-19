@@ -50,27 +50,56 @@ final class BatteryStatusTests: XCTestCase {
         )
     }
 
-    func testLowBatteryColorRemainsRedWhenLowPowerModeIsEnabled() {
+    func testLowPowerModeUsesYellowBatteryToneEvenWhenCharging() {
         let view = BatteryView(
-            levelBattery: 15,
-            isPluggedIn: false,
-            isCharging: false,
+            levelBattery: 60,
+            isPluggedIn: true,
+            isCharging: true,
             isInLowPowerMode: true,
             isForNotification: false
         )
 
-        XCTAssertEqual(view.batteryColor, .red)
+        XCTAssertEqual(view.batteryColor, .yellow)
     }
 
-    func testChargingAndFullyChargedBatteryColorsAreGreen() {
+    func testNormalChargingAndFullBatteryUseWhiteInsteadOfGreen() {
         XCTAssertEqual(
-            BatteryStatusPresentation.chargeColor(level: 8, isPluggedIn: false, isCharging: true),
-            .green
+            BatteryStatusPresentation.chargeColor(level: 8, isPluggedIn: false, isCharging: true, isInLowPowerMode: false),
+            .neutral
         )
         XCTAssertEqual(
-            BatteryStatusPresentation.chargeColor(level: 100, isPluggedIn: false, isCharging: false),
-            .green
+            BatteryStatusPresentation.chargeColor(level: 100, isPluggedIn: true, isCharging: false),
+            .neutral
         )
+    }
+
+    func testLowBatteryWarningRemainsRedWhenLowPowerModeIsOff() {
+        XCTAssertEqual(
+            BatteryStatusPresentation.chargeColor(level: 15, isPluggedIn: false, isCharging: false),
+            .red
+        )
+    }
+
+    func testPowerSourceHUDOnlyAppearsForAnActualConnectOrDisconnect() {
+        XCTAssertEqual(
+            BatteryStatusTransition.powerSourceHUDKind(previousPluggedIn: false, currentPluggedIn: true),
+            .powerConnected
+        )
+        XCTAssertEqual(
+            BatteryStatusTransition.powerSourceHUDKind(previousPluggedIn: true, currentPluggedIn: false),
+            .powerDisconnected
+        )
+        XCTAssertNil(BatteryStatusTransition.powerSourceHUDKind(previousPluggedIn: true, currentPluggedIn: true))
+    }
+
+    func testFullBatteryHUDRequiresAThresholdCrossingWhileConnectedToPower() {
+        let previous = BatteryInfo(isPluggedIn: true, isCharging: true, currentCapacity: 99, maxCapacity: 100, isInLowPowerMode: false, timeToFullCharge: 0)
+        let full = BatteryInfo(isPluggedIn: true, isCharging: false, currentCapacity: 100, maxCapacity: 100, isInLowPowerMode: false, timeToFullCharge: 0)
+        let unplugged = BatteryInfo(isPluggedIn: false, isCharging: false, currentCapacity: 100, maxCapacity: 100, isInLowPowerMode: false, timeToFullCharge: 0)
+
+        XCTAssertTrue(BatteryStatusTransition.shouldPresentFullBatteryHUD(previous: previous, current: full, threshold: 100))
+        XCTAssertFalse(BatteryStatusTransition.shouldPresentFullBatteryHUD(previous: full, current: full, threshold: 100))
+        XCTAssertFalse(BatteryStatusTransition.shouldPresentFullBatteryHUD(previous: previous, current: unplugged, threshold: 100))
     }
 
     func testLowBatteryPulseIsPreservedOutsideLowPowerMode() {
@@ -85,7 +114,7 @@ final class BatteryStatusTests: XCTestCase {
                 status: .notDetermined
             )
         )
-        XCTAssertTrue(
+        XCTAssertFalse(
             LocationAuthorizationRequestPolicy.shouldRequestAuthorization(
                 for: .weatherFeatureEnabled,
                 status: .notDetermined
@@ -97,6 +126,32 @@ final class BatteryStatusTests: XCTestCase {
                 status: .notDetermined
             )
         )
+    }
+
+    func testAutomaticLocationTriggersDoNotPrompt() {
+        for trigger: LocationAuthorizationRequestTrigger in [
+            .appLaunch,
+            .weatherFeatureEnabled,
+            .weatherWidgetDisplayed
+        ] {
+            XCTAssertFalse(
+                LocationAuthorizationRequestPolicy.shouldRequestAuthorization(
+                    for: trigger,
+                    status: .notDetermined
+                ),
+                "Unexpected location prompt for \(trigger)"
+            )
+        }
+    }
+
+    func testDownloadsFolderAccessIsOnlyRequestedAfterUserEnablement() {
+        XCTAssertFalse(DownloadsFolderAccessRequestPolicy.shouldProbe(for: .appLaunch))
+        XCTAssertTrue(DownloadsFolderAccessRequestPolicy.shouldProbe(for: .userEnabledListener))
+    }
+
+    func testAccessibilityPromptRequiresExplicitUserAction() {
+        XCTAssertFalse(AccessibilityPermissionPromptPolicy.shouldPrompt(for: .appStartup))
+        XCTAssertTrue(AccessibilityPermissionPromptPolicy.shouldPrompt(for: .explicitUserAction))
     }
 
     func testLocationPermissionIsNotRequestedAgainAfterDecision() {

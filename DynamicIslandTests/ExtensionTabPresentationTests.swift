@@ -78,6 +78,53 @@ final class ExtensionTabPresentationTests: XCTestCase {
         XCTAssertLessThan(contentWidth, 690)
     }
 
+    func testFullHeightExtensionTabCentersWithinAvailableHostWidth() {
+        let offset = ContentView.resolvedFullHeightExtensionTabHorizontalOffset(
+            availableWidth: 659,
+            contentWidth: 638
+        )
+
+        XCTAssertEqual(offset, 10.5, accuracy: 0.001)
+    }
+
+    func testFullHeightExtensionTabDoesNotShiftWhenItOverflowsHostWidth() {
+        let offset = ContentView.resolvedFullHeightExtensionTabHorizontalOffset(
+            availableWidth: 620,
+            contentWidth: 638
+        )
+
+        XCTAssertEqual(offset, 0, accuracy: 0.001)
+    }
+
+    func testFullHeightExtensionTabReducesExcessBottomInsetToMatchSideInsets() {
+        let offset = ContentView.resolvedFullHeightExtensionTabVerticalOffset(
+            bottomInset: 30,
+            horizontalInset: 28.5
+        )
+        let alreadyBalanced = ContentView.resolvedFullHeightExtensionTabVerticalOffset(
+            bottomInset: 28.5,
+            horizontalInset: 28.5
+        )
+
+        XCTAssertEqual(offset, 1.5, accuracy: 0.001)
+        XCTAssertEqual(alreadyBalanced, 0, accuracy: 0.001)
+    }
+
+    func testTabDirectionFollowsVisibleTabOrder() {
+        XCTAssertTrue(tabSwitchMovesForward(fromIndex: 0, toIndex: 4))
+        XCTAssertFalse(tabSwitchMovesForward(fromIndex: 4, toIndex: 0))
+        XCTAssertTrue(tabSwitchMovesForward(fromIndex: 2, toIndex: 2))
+    }
+
+    func testExtensionTabTransitionIdentityIncludesExperienceID() {
+        let first = ContentView.resolvedTabTransitionIdentity(view: .extensionExperience, extensionID: "hermes.monitor")
+        let second = ContentView.resolvedTabTransitionIdentity(view: .extensionExperience, extensionID: "other.extension")
+        let home = ContentView.resolvedTabTransitionIdentity(view: .home, extensionID: "hermes.monitor")
+
+        XCTAssertNotEqual(first, second)
+        XCTAssertNotEqual(first, home)
+    }
+
     func testUserActivatedHermesSessionLinkOpensAndCancelsNavigation() throws {
         let url = try XCTUnwrap(URL(string: "hermes://session/session-123"))
         var openedURL: URL?

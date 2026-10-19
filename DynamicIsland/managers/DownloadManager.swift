@@ -20,6 +20,7 @@ import Foundation
 import SwiftUI
 import Observation
 import Defaults
+import Combine
 
 /// The half-finished files browsers leave in the Downloads folder, and the
 /// finished file each one is going to turn into.
@@ -108,6 +109,7 @@ class DownloadManager {
     
     private let coordinator = DynamicIslandViewCoordinator.shared
     private var source: DispatchSourceFileSystemObject?
+    private var downloadListenerCancellable: AnyCancellable?
     /// Which run of monitoring a scan belongs to. A scan reads the folder on
     /// `queue` and delivers on the main actor, so one that was already reading
     /// when monitoring stopped lands *after* the state it describes has been
@@ -139,13 +141,19 @@ class DownloadManager {
     }
     
     init() {
-        requestDownloadsPermissionIfNeeded()
-        startMonitoringIfNeeded()
+        if DownloadsFolderAccessRequestPolicy.shouldProbe(for: .appLaunch) {
+            requestDownloadsPermissionIfNeeded()
+            startMonitoringIfNeeded()
+        }
         
-        Defaults.publisher(.enableDownloadListener)
+        downloadListenerCancellable = Defaults.publisher(.enableDownloadListener, options: [])
             .sink { [weak self] _ in
                 guard let self else { return }
                 Task { @MainActor in
+                    if Defaults[.enableDownloadListener],
+                       DownloadsFolderAccessRequestPolicy.shouldProbe(for: .userEnabledListener) {
+                        self.requestDownloadsPermissionIfNeeded()
+                    }
                     self.startMonitoringIfNeeded()
                 }
             }

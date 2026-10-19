@@ -1304,9 +1304,21 @@ struct ContentView: View {
                                 NotchTerminalView()
                             case .extensionExperience:
                                 if let payload = currentExtensionTabPayload() {
-                                    ExtensionNotchExperienceTabView(payload: payload)
-                                        .frame(width: fullHeightExtensionTabs ? fullHeightExtensionTabContentWidth : nil)
-                                        .frame(maxHeight: .infinity)
+                                    if fullHeightExtensionTabs {
+                                        GeometryReader { geometry in
+                                            ExtensionNotchExperienceTabView(payload: payload)
+                                                .frame(width: fullHeightExtensionTabContentWidth)
+                                                .frame(maxHeight: .infinity)
+                                                .offset(x: Self.resolvedFullHeightExtensionTabHorizontalOffset(
+                                                    availableWidth: geometry.size.width,
+                                                    contentWidth: fullHeightExtensionTabContentWidth
+                                                ))
+                                        }
+                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    } else {
+                                        ExtensionNotchExperienceTabView(payload: payload)
+                                            .frame(maxHeight: .infinity)
+                                    }
                                 } else {
                                     NotchHomeView(albumArtNamespace: albumArtNamespace)
                                 }
@@ -2555,6 +2567,11 @@ struct ContentView: View {
 
     static func resolvedFullHeightExtensionTabContentWidth(openNotchWidth: CGFloat, horizontalInset: CGFloat) -> CGFloat {
         max(0, openNotchWidth - (2 * max(0, horizontalInset)))
+    }
+
+    static func resolvedFullHeightExtensionTabHorizontalOffset(availableWidth: CGFloat, contentWidth: CGFloat) -> CGFloat {
+        guard availableWidth.isFinite, contentWidth.isFinite else { return 0 }
+        return max(0, (availableWidth - max(0, contentWidth)) / 2)
     }
 
     // Estimate the height required for minimalistic overrides (notably web content) and clamp it to the notch bounds.
