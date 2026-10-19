@@ -252,4 +252,47 @@ final class ExtensionTabPresentationTests: XCTestCase {
         )
         XCTAssertEqual(remotePolicy.decide(url: remoteURL, navigationType: .other), .allow)
     }
+
+    // MARK: - Combined privacy wing layout
+
+    private func standaloneFixture() -> ExtensionStandaloneLayout {
+        ExtensionStandaloneLayout(
+            totalWidth: 260,
+            outerHeight: 38,
+            contentHeight: 26,
+            leadingWidth: 44,
+            centerWidth: 160,
+            trailingWidth: 56
+        )
+    }
+
+    func testPrivacyWingWidthCameraAndMicrophoneUsesTwoIcons() {
+        // 2 * 24 + 4 spacing + 9 divider reserve + 8 trailing padding
+        XCTAssertEqual(ExtensionPrivacyCombinedLayout.privacyWingWidth(for: .cameraAndMicrophone), 69, accuracy: 0.001)
+    }
+
+    func testPrivacyWingWidthSingleIndicatorUsesOneIcon() {
+        // 24 + 9 + 8
+        XCTAssertEqual(ExtensionPrivacyCombinedLayout.privacyWingWidth(for: .microphoneOnly), 41, accuracy: 0.001)
+        XCTAssertEqual(ExtensionPrivacyCombinedLayout.privacyWingWidth(for: .cameraOnly), 41, accuracy: 0.001)
+    }
+
+    func testPrivacyWingWidthIsZeroWithoutCameraOrMicrophone() {
+        XCTAssertEqual(ExtensionPrivacyCombinedLayout.privacyWingWidth(for: .none), 0, accuracy: 0.001)
+        XCTAssertEqual(ExtensionPrivacyCombinedLayout.privacyWingWidth(for: .recordingOnly), 0, accuracy: 0.001)
+    }
+
+    func testCombinedLayoutAddsPrivacyWidthAndKeepsOtherWingsUnchanged() {
+        let standalone = standaloneFixture()
+        let privacyWidth = ExtensionPrivacyCombinedLayout.privacyWingWidth(for: .cameraAndMicrophone)
+        let combined = ExtensionPrivacyCombinedLayout.combined(standalone: standalone, privacyWidth: privacyWidth)
+
+        XCTAssertEqual(combined.totalWidth, standalone.totalWidth + privacyWidth, accuracy: 0.001)
+        XCTAssertEqual(combined.outerHeight, standalone.outerHeight, accuracy: 0.001)
+        XCTAssertEqual(combined.contentHeight, standalone.contentHeight, accuracy: 0.001)
+        XCTAssertEqual(combined.leadingWidth, standalone.leadingWidth, accuracy: 0.001)
+        XCTAssertEqual(combined.centerWidth, standalone.centerWidth, accuracy: 0.001)
+        XCTAssertEqual(combined.trailingWidth, standalone.trailingWidth, accuracy: 0.001)
+        XCTAssertEqual(combined.privacyWidth, privacyWidth, accuracy: 0.001)
+    }
 }

@@ -29,6 +29,49 @@ struct ExtensionStandaloneLayout {
     let trailingWidth: CGFloat
 }
 
+/// Standalone extension layout widened by one privacy (camera/mic) wing.
+/// Leading, center and trailing widths are the unchanged standalone values.
+struct ExtensionPrivacyCombinedLayout {
+    let totalWidth: CGFloat
+    let outerHeight: CGFloat
+    let contentHeight: CGFloat
+    let leadingWidth: CGFloat
+    let centerWidth: CGFloat
+    let trailingWidth: CGFloat
+    let privacyWidth: CGFloat
+
+    /// Camera and microphone only; recording has its own pulsator elsewhere.
+    static func privacyIconCount(for layout: IndicatorLayout) -> Int {
+        (layout.showsCameraIndicator ? 1 : 0) + (layout.showsMicrophoneIndicator ? 1 : 0)
+    }
+
+    /// Divider reserve = 1pt divider + 8pt gap before the first icon.
+    static func privacyWingWidth(
+        for layout: IndicatorLayout,
+        iconSize: CGFloat = 24,
+        spacing: CGFloat = 4,
+        dividerReserve: CGFloat = 9,
+        trailingPadding: CGFloat = 8
+    ) -> CGFloat {
+        let count = privacyIconCount(for: layout)
+        guard count > 0 else { return 0 }
+        let icons = CGFloat(count) * iconSize + CGFloat(count - 1) * spacing
+        return icons + dividerReserve + trailingPadding
+    }
+
+    static func combined(standalone: ExtensionStandaloneLayout, privacyWidth: CGFloat) -> ExtensionPrivacyCombinedLayout {
+        ExtensionPrivacyCombinedLayout(
+            totalWidth: standalone.totalWidth + privacyWidth,
+            outerHeight: standalone.outerHeight,
+            contentHeight: standalone.contentHeight,
+            leadingWidth: standalone.leadingWidth,
+            centerWidth: standalone.centerWidth,
+            trailingWidth: standalone.trailingWidth,
+            privacyWidth: privacyWidth
+        )
+    }
+}
+
 struct ExtensionLiveActivityStandaloneView: View {
     let payload: ExtensionLiveActivityPayload
     let layout: ExtensionStandaloneLayout
@@ -80,6 +123,87 @@ struct ExtensionLiveActivityStandaloneView: View {
         }
     }
 
+}
+
+struct ExtensionPrivacyCombinedLiveActivity: View {
+    let payload: ExtensionLiveActivityPayload
+    let layout: ExtensionPrivacyCombinedLayout
+    let privacyLayout: IndicatorLayout
+    let isHovering: Bool
+
+    private var descriptor: AtollLiveActivityDescriptor { payload.descriptor }
+    private var contentHeight: CGFloat { layout.contentHeight }
+    private var accentColor: Color { descriptor.accentColor.swiftUIColor }
+    private var resolvedLeadingContent: AtollTrailingContent {
+        resolvedExtensionLeadingContent(for: descriptor)
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ExtensionLeadingContentView(
+                content: resolvedLeadingContent,
+                badge: descriptor.badgeIcon,
+                accent: accentColor,
+                frameWidth: layout.leadingWidth,
+                frameHeight: contentHeight,
+                defaultIcon: descriptor.leadingIcon
+            )
+            .frame(width: layout.leadingWidth, height: contentHeight)
+
+            Rectangle()
+                .fill(Color.black)
+                .frame(width: layout.centerWidth, height: contentHeight)
+
+            ExtensionMusicWingView(
+                payload: payload,
+                notchHeight: contentHeight,
+                trailingWidth: layout.trailingWidth
+            )
+            .frame(width: layout.trailingWidth, height: contentHeight)
+
+            ExtensionPrivacyCompactWing(privacyLayout: privacyLayout)
+                .frame(width: layout.privacyWidth, height: contentHeight)
+        }
+        .frame(width: layout.totalWidth, height: layout.outerHeight + (isHovering ? 8 : 0))
+        .transition(
+            .asymmetric(
+                insertion: .scale(scale: 0.95).combined(with: .opacity).animation(.spring(response: 0.4, dampingFraction: 0.8)),
+                removal: .scale(scale: 0.95).combined(with: .opacity).animation(.spring(response: 0.3, dampingFraction: 0.9))
+            )
+        )
+        .animation(.smooth(duration: 0.25), value: payload.id)
+        .onAppear {
+            logExtensionDiagnostics("Displaying extension live activity \(payload.descriptor.id) for \(payload.bundleIdentifier) combined with privacy")
+        }
+        .onDisappear {
+            logExtensionDiagnostics("Hid extension live activity \(payload.descriptor.id) combined with privacy")
+        }
+    }
+}
+
+/// Icons only: divider, then microphone and camera in the existing privacy colours.
+struct ExtensionPrivacyCompactWing: View {
+    let privacyLayout: IndicatorLayout
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Rectangle()
+                .fill(Color.white.opacity(0.12))
+                .frame(width: 1, height: 14)
+
+            HStack(spacing: 4) {
+                if privacyLayout.showsMicrophoneIndicator {
+                    PrivacyIcon(type: .microphone)
+                }
+                if privacyLayout.showsCameraIndicator {
+                    PrivacyIcon(type: .camera)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+        .padding(.trailing, 8)
+        .padding(.vertical, 6)
+    }
 }
 
 struct ExtensionMusicWingView: View {

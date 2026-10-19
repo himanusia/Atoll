@@ -1148,6 +1148,20 @@ struct ContentView: View {
                               .transition(.blurReplace.animation(.interactiveSpring(dampingFraction: 1.2)))
                       } else if (!isCurrentScreenExpansionVisible || currentScreenExpansionType == .doNotDisturb) && vm.notchState == .closed && Defaults[.enableDoNotDisturbDetection] && Defaults[.showDoNotDisturbIndicator] && (doNotDisturbManager.isDoNotDisturbActive || doNotDisturbManager.isFocusToastDismissing) && !vm.hideOnClosed && !lockScreenManager.isLocked {
                           DoNotDisturbLiveActivity()
+                    } else if let extensionPayload = extensionStandalonePayload,
+                              privacyManager.hasAnyIndicator,
+                              privacyManager.indicatorLayout.showsCameraIndicator || privacyManager.indicatorLayout.showsMicrophoneIndicator,
+                              Defaults[.enableCameraDetection] || Defaults[.enableMicrophoneDetection] {
+                        ExtensionPrivacyCombinedLiveActivity(
+                            payload: extensionPayload,
+                            layout: extensionPrivacyCombinedLayout(
+                                for: extensionPayload,
+                                notchHeight: vm.effectiveClosedNotchHeight,
+                                isHovering: isHovering
+                            ),
+                            privacyLayout: privacyManager.indicatorLayout,
+                            isHovering: isHovering
+                        )
                     } else if (!isCurrentScreenExpansionVisible || currentScreenExpansionType == .privacy) && vm.notchState == .closed && privacyManager.hasAnyIndicator && (Defaults[.enableCameraDetection] || Defaults[.enableMicrophoneDetection]) && !vm.hideOnClosed {
                         PrivacyLiveActivity()
                       } else if let extensionPayload = extensionStandalonePayload {
@@ -2012,6 +2026,13 @@ struct ContentView: View {
         return payload
     }
 
+    private func extensionPrivacyCombinedLayout(for payload: ExtensionLiveActivityPayload, notchHeight: CGFloat, isHovering: Bool) -> ExtensionPrivacyCombinedLayout {
+        ExtensionPrivacyCombinedLayout.combined(
+            standalone: extensionStandaloneLayout(for: payload, notchHeight: notchHeight, isHovering: isHovering),
+            privacyWidth: ExtensionPrivacyCombinedLayout.privacyWingWidth(for: privacyManager.indicatorLayout)
+        )
+    }
+
     private func extensionStandaloneLayout(for payload: ExtensionLiveActivityPayload, notchHeight: CGFloat, isHovering: Bool) -> ExtensionStandaloneLayout {
         let outerHeight = notchHeight
         let contentHeight = max(0, notchHeight - (isHovering ? 0 : 12))
@@ -2416,6 +2437,17 @@ struct ContentView: View {
         return isMouseOverClosedNotchHitArea(location)
     }
 
+    /// Cheap, side-effect-free approximation of the combined branch: a Hermes
+    /// activity exists and a camera/mic indicator is showing on a closed notch.
+    private var combinedPrivacyWingPossible: Bool {
+        vm.notchState == .closed
+            && !vm.hideOnClosed
+            && enableExtensionLiveActivities
+            && !extensionLiveActivityManager.sortedActivities().isEmpty
+            && privacyManager.hasAnyIndicator
+            && (privacyManager.indicatorLayout.showsCameraIndicator || privacyManager.indicatorLayout.showsMicrophoneIndicator)
+    }
+
     private func isMouseOverClosedNotchHitArea(_ location: NSPoint = NSEvent.mouseLocation) -> Bool {
         guard let screen = NSScreen.screens.first(where: { $0.localizedName == currentScreenName }) else {
             return false
@@ -2430,7 +2462,14 @@ struct ContentView: View {
         let height = max(closedHeight, recordingSize?.height ?? 0) + 6
             + PinnedLyricsView.reservedHeight(isEligible: pinnedLyricsVisible,
                 availability: musicManager.lyricsAvailability, context: pinnedLyricContext)
-        let width = max(closedWidth, recordingSize?.width ?? 0) + 24
+        var contentWidth = max(closedWidth, recordingSize?.width ?? 0)
+        // Hermes count + camera/mic wing is wider than the plain notch. The
+        // drawn width is already measured (closedContentWidth), so follow it
+        // instead of re-deriving the payload here.
+        if combinedPrivacyWingPossible {
+            contentWidth = max(contentWidth, closedContentWidth)
+        }
+        let width = contentWidth + 24
         // Same shift the content is drawn with, so the hit area stays under it.
         let minX = screen.frame.midX - width / 2 + menuBarClearanceOffset
         let minY = screen.frame.maxY - height
