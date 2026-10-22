@@ -500,18 +500,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // states above already returned their own sizes.
         if vm.notchState == .closed, !coordinator.expandingView.show, !coordinator.sneakPeek.show {
             // No shadow padding while idle: any extra width sits over the menu bar extras
-            // beside the notch, and this window's level is above NSStatusItem. Since the
-            // closed notch size carries its own padding, clamp to the physical cutout.
+            // beside the notch, and this window's level is above NSStatusItem.
             let closed = vm.closedNotchSize
-            var width = closed.width + 8
-            if !Defaults[.customizePhysicalNotchWidth],
-               let scr = NSScreen.main ?? NSScreen.screens.first,
-               scr.safeAreaInsets.top > 0,
-               let l = scr.auxiliaryTopLeftArea?.width,
-               let r = scr.auxiliaryTopRightArea?.width {
-                width = min(width, scr.frame.width - l - r + 8)
-            }
-            return CGSize(width: width, height: closed.height + 2)
+            return CGSize(width: closed.width + 8, height: closed.height + 2)
         }
         
         // Use a consistent height for different view types
