@@ -1,0 +1,13 @@
+{
+  "name": "atoll-transcription-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Atoll extension: local meeting transcription (system audio + mic) with live transcript panel and notch REC indicator.",
+  "main": "host.js",
+  "scripts": {
+    "start": "node host.js"
+  },
+  "dependencies": {
+    "@ebullioscopic/atoll-js": "^1.0.0"
+  }
+}
