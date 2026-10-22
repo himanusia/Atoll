@@ -493,6 +493,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Use minimalistic or normal size based on settings
         var baseSize = Defaults[.enableMinimalisticUI] ? minimalisticOpenNotchSize(isDynamicIslandMode: shouldUseDynamicIslandMode(for: vm.screen)) : openNotchSize
+
+        // Keep the window at the closed-notch size while the notch is idle, so the
+        // window never sits on top of the menu bar extras beside the notch (status
+        // items are below this window's level and were being covered). HUD/sneak-peek
+        // states above already returned their own sizes.
+        if vm.notchState == .closed, !coordinator.expandingView.show, !coordinator.sneakPeek.show {
+            return addShadowPadding(to: vm.closedNotchSize, isMinimalistic: Defaults[.enableMinimalisticUI])
+        }
         
         // Use a consistent height for different view types
         if coordinator.currentView == .timer {
