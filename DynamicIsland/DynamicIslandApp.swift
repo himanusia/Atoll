@@ -499,7 +499,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // items are below this window's level and were being covered). HUD/sneak-peek
         // states above already returned their own sizes.
         if vm.notchState == .closed, !coordinator.expandingView.show, !coordinator.sneakPeek.show {
-            return addShadowPadding(to: vm.closedNotchSize, isMinimalistic: Defaults[.enableMinimalisticUI])
+            // No shadow padding while idle: any extra width sits over the menu bar extras
+            // beside the notch, and this window's level is above NSStatusItem.
+            let closed = vm.closedNotchSize
+            return CGSize(width: closed.width + 8, height: closed.height + 2)
         }
         
         // Use a consistent height for different view types
