@@ -128,8 +128,30 @@ struct TabSelectionView: View {
         tabs.count > 8 ? 0.82 : 1.0
     }
 
+    /// Tabs live in the left menu-bar wing. Anything past the physical notch cutout is
+    /// hidden behind the camera housing, so the strip has to fit inside that wing.
+    private var availableStripWidth: CGFloat {
+        guard let screen = NSScreen.main ?? NSScreen.screens.first,
+              screen.safeAreaInsets.top > 0,
+              let leftWing = screen.auxiliaryTopLeftArea?.width else { return 320 }
+        let windowWidth = openNotchSize.width
+        let windowOriginX = screen.frame.midX - windowWidth / 2
+        // header padding + window inset before the first tab
+        let stripOriginX = windowOriginX + 34
+        return max(leftWing - stripOriginX - 8, 110)
+    }
+
+    private var stripSpacing: CGFloat {
+        let count = max(tabs.count, 1)
+        guard count > 1 else { return 0 }
+        let iconSlot: CGFloat = 17
+        let free = availableStripWidth - CGFloat(count) * iconSlot
+        let spacing = free / CGFloat(count - 1)
+        return min(24, max(3, spacing))
+    }
+
     var body: some View {
-        HStack(spacing: tabSpacing) {
+        HStack(spacing: stripSpacing) {
             ForEach(Array(tabs.enumerated()), id: \.element.id) { idx, tab in
                 let isSelected = isSelected(tab)
                 let activeAccent = tab.accentColor ?? .white

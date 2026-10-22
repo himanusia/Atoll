@@ -82,6 +82,11 @@ func enabledStandardTabCount() -> Int {
         count += 1
     }
 
+    // LLM usage tab
+    if Defaults[.enableLLMUsageFeature] {
+        count += 1
+    }
+
     // Notes / Clipboard tab
     if Defaults[.enableNotes] || (Defaults[.enableClipboardManager] && Defaults[.clipboardDisplayMode] == .separateTab) {
         count += 1
@@ -95,21 +100,32 @@ func enabledStandardTabCount() -> Int {
     return count
 }
 
+/// Number of third-party extension tabs (each one is another icon in the strip).
+@MainActor
+func enabledExtensionTabCount() -> Int {
+    ExtensionNotchExperienceManager.shared.activeExperiences.filter { $0.descriptor.tab != nil }.count
+}
+
 /// Returns the recommended minimum notch width for the given tab count.
+/// The strip is icon-only, so the width has to grow with every tab it renders —
+/// including extension tabs, which used to be left out of this calculation entirely.
 func recommendedMinimumNotchWidth(forTabCount count: Int) -> CGFloat {
-    if count >= 6 { return 770 }
-    if count >= 5 { return 690 }
-    return 640
+    max(640, 540 + CGFloat(count) * 48)
 }
 
 /// Returns the recommended minimum notch width for the current tab configuration.
+@MainActor
 func currentRecommendedMinimumNotchWidth() -> CGFloat {
-    recommendedMinimumNotchWidth(forTabCount: enabledStandardTabCount())
+    let extensionTabs = Defaults[.enableThirdPartyExtensions]
+        && Defaults[.enableExtensionNotchExperiences]
+        && Defaults[.enableExtensionNotchTabs] ? enabledExtensionTabCount() : 0
+    return recommendedMinimumNotchWidth(forTabCount: enabledStandardTabCount() + extensionTabs)
 }
 
 /// Enforces the minimum notch width based on current tab count.
 /// Also clamps to screen width so the notch never exceeds the display.
 /// Only adjusts when not in minimalistic mode.
+@MainActor
 func enforceMinimumNotchWidth() {
     guard !Defaults[.enableMinimalisticUI] else { return }
     let minWidth = currentRecommendedMinimumNotchWidth()
