@@ -113,8 +113,23 @@ struct TabSelectionView: View {
         }
         return tabsArray
     }
+    /// Tabs are icon-only, so a crowded strip is a spacing problem. Compress spacing (and
+    /// shrink the glyphs) as the strip fills up, instead of letting the clip cut tabs off.
+    private var tabSpacing: CGFloat {
+        switch tabs.count {
+        case ...4: return 24
+        case 5...6: return 16
+        case 7...8: return 10
+        default: return 6
+        }
+    }
+
+    private var tabScale: CGFloat {
+        tabs.count > 8 ? 0.82 : 1.0
+    }
+
     var body: some View {
-        HStack(spacing: 24) {
+        HStack(spacing: tabSpacing) {
             ForEach(Array(tabs.enumerated()), id: \.element.id) { idx, tab in
                 let isSelected = isSelected(tab)
                 let activeAccent = tab.accentColor ?? .white
@@ -126,6 +141,7 @@ struct TabSelectionView: View {
                     }
                     coordinator.currentView = tab.view
                 }
+                .scaleEffect(tabScale)
                 .frame(height: 26)
                 .foregroundStyle(isSelected ? activeAccent : .gray)
                 .background {
